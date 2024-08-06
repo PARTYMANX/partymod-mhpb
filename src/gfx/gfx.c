@@ -15,10 +15,10 @@
 #include <gfx/vk/gfx_vk.h>
 #include <gfx/gfx_global.h>
 
-int internal_resolution_x = 512;
-int internal_resolution_y = 240;
-int resolution_x = 512;
-int resolution_y = 240;
+int internal_resolution_x = 640;
+int internal_resolution_y = 480;
+int resolution_x = 640;
+int resolution_y = 480;
 float aspectRatio = 4.0f / 3.0f;
 uint8_t textureFilter = 0;
 uint8_t useHiResTextures = 0;
@@ -57,18 +57,22 @@ void handleGfxEvent(SDL_Event *e) {
 }
 
 void initDDraw() {
-	//printf("STUB: initDDraw\n");
+	printf("STUB: initDDraw\n");
 
-	int *width = 0x029d6fe4;
-	int *height = 0x029d6fe8;
+	uint32_t baseAddr = *((uint32_t *)0x539db4);
+	//int *screen_width[] = { baseAddr + 0x0018984c, baseAddr + 0x0018984c, baseAddr + 0x0018984c };
+	//int *screen_height[] = { baseAddr + 0x00189850, baseAddr + 0x00189850, baseAddr + 0x00189850 };
 
-	*width = resolution_x;
-	*height = resolution_y;
+	int *screen_width = 0x00537aac;
+	int *screen_height = 0x00537ab0;
+
+	*screen_width = resolution_x;
+	*screen_height = resolution_y;
 }
 
 void initD3D() {
 	//printf("STUB: initD3D\n");
-	void *hwnd = 0x029d4fc4;
+	void *hwnd = 0x0053b978;
 
 	uint8_t result = CreateVKRenderer(hwnd, &renderer);
 
@@ -90,19 +94,17 @@ void D3D_ClearBuffers() {
 
 void D3DPOLY_Init() {
 	//printf("STUB: D3DPOLY_Init\n");
-	void (__cdecl *D3DMODEL_Startup)() = 0x004cffb0;
-	void (__cdecl *SOFTREND_Startup)() = 0x004ef810;
-	void (__cdecl *Init_PolyBuf)() = 0x004d4640;
+	log_printf(LL_INFO, "STUB: D3DPOLY_Init\n");
 
-	D3DMODEL_Startup();
-	SOFTREND_Startup();
-	Init_PolyBuf();
-
-	uint16_t *modelPushbacks = 0x0057d4fc;
-	for (int i = 0; i < 30000; i++) {
-		//((uint32_t *)modelPushbacks)[i] = 0x7fff7fff;
-		//modelPushbacks[i] *= 0.1f;
+	if (currentModule == -1) {
+		return;
 	}
+
+	uint32_t baseAddr = *((uint32_t *)0x539db4);
+
+	void (__cdecl *Init_PolyBuf[])() = { baseAddr + 0x000149b0, baseAddr + 0x0006b440, baseAddr + 0x000149b0 };
+
+	Init_PolyBuf[currentModule]();
 }
 
 uint32_t fixDXColor(uint32_t color) {
@@ -110,57 +112,35 @@ uint32_t fixDXColor(uint32_t color) {
 }
 
 void D3DPOLY_StartScene(int a, int b) {
-	uint16_t *SP_OTPushback = 0x005606c4;
-	uint16_t *SP_OTPushback2 = 0x005606dc;
-	uint16_t *SP_OTPushback3 = 0x005606e8;
-	
-	uint16_t *M3d_OTPushback = 0x00560fc8;
-	uint16_t *M3d_OTPushback2 = 0x00560fca;
-	uint16_t *M3d_OTPushback3 = 0x00560fcc;
+	uint32_t baseAddr = *((uint32_t *)0x539db4);
 
-	uint32_t *modelPushback = 0x0056b498;
-	uint32_t *SP_ZPushback = 0x0055ed08;
-	uint32_t *LTIM3D_Pushback = 0x00560798;
-
-	//printf("SP_PUSHBACK: %d %d %d\n", *SP_OTPushback, *SP_OTPushback2, *SP_OTPushback3);
-	//printf("M3D_PUSHBACK: %d %d %d\n", *M3d_OTPushback, *M3d_OTPushback2, *M3d_OTPushback3);
-	//printf("MODEL PUSHBACK: %d %d %d\n", *modelPushback, *SP_ZPushback, *LTIM3D_Pushback);
-
-	void (__cdecl *setupFog)(int) = 0x004d1160;
-	uint32_t *viewportClass = 0x00560698;
-	uint16_t *DpqMin = 0x005606a4;
-	uint16_t *DpqMinMaybe = *viewportClass + 8;
+	void (__cdecl *setupFog[])(int) = { baseAddr + 0x00011910, baseAddr + 0x00068560, baseAddr + 0x00011910 };
+	uint32_t *viewportClass[] = { baseAddr + 0x0018e548, baseAddr + 0x000bf308, baseAddr + 0x0018e548 };
+	uint16_t *DpqMin[] = { baseAddr + 0x0018e554, baseAddr + 0x000bf318, baseAddr + 0x0018e554 };
 	uint16_t *DpqMaxMaybe = *viewportClass + 10;
-	float *fogThreshold = 0x00546b3c;
-	float *FogYonScale = 0x00546b38;
-	float *VideoFogYonScale = 0x00545334;
-	uint32_t *gShellMode = 0x006a35b4;
-	uint8_t *startscene = 0x0069d114;
+	float *fogThreshold[] = { baseAddr + 0x00071d84, baseAddr + 0x000ae034, baseAddr + 0x00071d84 };
+	float *FogYonScale[] = { baseAddr + 0x00071d80, baseAddr + 0x000ae030, baseAddr + 0x00071d80 };
+	float *VideoFogYonScale[] = { baseAddr + 0x0007d9d0, baseAddr + 0x000b4f68, baseAddr + 0x0007d9d0 };
+	uint32_t *gShellMode[] = { baseAddr + 0x0018e670, baseAddr + 0x002203a8, baseAddr + 0x0018e670};
+	uint8_t *startscene[] = { baseAddr + 0x00188e04, baseAddr + 0x0021b89c, baseAddr + 0x00188e04 };
 
 	//printf("STUB: D3DPOLY_StartScene: 0x%08x 0x%08x\n", a, b);
 
 	//float *fog = 0x00546b38;
 	//*fog = 10000.0f;
 
-	*startscene = 1;
+	*(startscene[currentModule]) = 1;
 
-	updateMovieTexture();	// a bit of a hack: update the movie texture here in the main thread, as the music thread also updates it.  not exactly safe, but it avoids invalid vulkan use
+	//updateMovieTexture();	// a bit of a hack: update the movie texture here in the main thread, as the music thread also updates it.  not exactly safe, but it avoids invalid vulkan use
 
-	*fogThreshold = (float)*DpqMin / (float)*DpqMaxMaybe;
+	*(fogThreshold[currentModule]) = (float)*(DpqMin[currentModule]) / (float)*DpqMaxMaybe;
 	if (gShellMode == 1) {
-		*FogYonScale = 1000.0f;
+		*(FogYonScale[currentModule]) = 1000.0f;
 	} else {
-		*FogYonScale = *VideoFogYonScale;
+		*(FogYonScale[currentModule]) = *(VideoFogYonScale[currentModule]);
 	}
 
-	float hither = *DpqMinMaybe;
-	float yon = *DpqMaxMaybe * *FogYonScale;
-	float zBufMin = hither / yon;
-
-	//printf("HITHER %f YON %f ZBUFMIN %f\n", hither, yon, zBufMin);
-
-
-	setupFog(a);
+	setupFog[currentModule](a);
 
 	uint32_t clearColor = fixDXColor(b);
 
@@ -169,15 +149,23 @@ void D3DPOLY_StartScene(int a, int b) {
 	}
 }
 
-void (*D3DPOLY_EndScene)() = 0x004d12e0;
+
 
 void D3D_EndSceneAndFlip() {
-	D3DPOLY_EndScene();
+	uint32_t baseAddr = *((uint32_t *)0x539db4);
+	void (*D3DPOLY_EndScene[])() = { baseAddr + 0x00011a90, baseAddr + 0x000686e0, baseAddr + 0x00011a90 };
+
+	D3DPOLY_EndScene[currentModule]();
 	//printf("STUB: D3D_EndSceneAndFlip\n");
 
 	if (!isMinimized) {
 		finishRender(renderer);
 	}
+}
+
+// 15590
+int _cdecl unkFunctionWithD3DStuff(void *tex) {
+	return 0;
 }
 
 struct dxpolytextured {
@@ -192,7 +180,18 @@ struct dxpoly {
 };
 
 inline uint32_t applyFog(uint32_t color_in, float depth) {
-	uint32_t *viewportClass = 0x00560698;
+	uint32_t baseAddr = *((uint32_t *)0x539db4);
+	uint32_t *viewportClass[] = { baseAddr + 0x0018e548, baseAddr + 0x000bf308, baseAddr + 0x0018e548 };
+	float *fogThreshold[] = { baseAddr + 0x00071d84, baseAddr + 0x000ae034, baseAddr + 0x00071d84 };
+	float *FogYonScale[] = { baseAddr + 0x00071d80, baseAddr + 0x000ae030, baseAddr + 0x00071d80 };
+	uint16_t *someotherfogvalue = *viewportClass + 14;
+	uint16_t *DpqMaxMaybe = *viewportClass + 10;
+	uint32_t *aFog[] = { baseAddr + 0x00085c80, baseAddr + 0x00118718, baseAddr + 0x00071d80 };
+	uint32_t *rFog[] = { baseAddr + 0x0010616c, baseAddr + 0x00198c04, baseAddr + 0x00071d80 };
+	uint32_t *gFog[] = { baseAddr + 0x001485a4, baseAddr + 0x001db03c, baseAddr + 0x00071d80 };
+	uint32_t *bFog[] = { baseAddr + 0x000c6080, baseAddr + 0x00158b18, baseAddr + 0x00071d80 };
+
+	/*uint32_t *viewportClass = 0x00560698;
 	float *fogThreshold = 0x00546b3c;
 	float *FogYonScale = 0x00546b38;
 	uint16_t *someotherfogvalue = *viewportClass + 14;
@@ -200,13 +199,13 @@ inline uint32_t applyFog(uint32_t color_in, float depth) {
 	uint32_t *aFog = 0x00599f90;
 	uint32_t *rFog = 0x0061a47c;
 	uint32_t *gFog = 0x0065c8b0;
-	uint32_t *bFog = 0x005da390;
+	uint32_t *bFog = 0x005da390;*/
 
-	float fogDist = (((float)*someotherfogvalue / depth) / ((float)*DpqMaxMaybe * *FogYonScale));
+	float fogDist = (((float)*someotherfogvalue / depth) / ((float)*DpqMaxMaybe * *(FogYonScale[currentModule])));
 	//printf("Fog dist = %f\n", fogDist);
 
-	if ((*fogThreshold < 1.0f) && (*fogThreshold <= fogDist)) {
-		float fogFactor = (fogDist - *fogThreshold) / (1.0f - *fogThreshold);
+	if ((*(fogThreshold[currentModule]) < 1.0f) && (*(fogThreshold[currentModule]) <= fogDist)) {
+		float fogFactor = (fogDist - *(fogThreshold[currentModule])) / (1.0f - *(fogThreshold[currentModule]));
 		fogFactor *= 255.0f;
 		if (fogFactor > 255.0f) {
 			fogFactor = 255.0f;
@@ -219,18 +218,19 @@ inline uint32_t applyFog(uint32_t color_in, float depth) {
 		uint32_t b = color_in & 0x000000ff;
 		uint32_t a = color_in >> 24 & 0x000000ff;
 
-		return rFog[r * 256 + fogIdx] | gFog[g * 256 + fogIdx] | bFog[b * 256 + fogIdx] | aFog[a * 256 + fogIdx];
+		return (rFog[currentModule])[r * 256 + fogIdx] | (gFog[currentModule])[g * 256 + fogIdx] | (bFog[currentModule])[b * 256 + fogIdx] | (aFog[currentModule])[a * 256 + fogIdx];
 	}
 
 	return color_in;
 }
 
 void transformDXCoords(renderVertex *vertices, int count) {
-	int *screen_width = 0x029d6fe4;
-	int *screen_height = 0x029d6fe8;
+	uint32_t baseAddr = *((uint32_t *)0x539db4);
+	int *screen_width[] = { baseAddr + 0x0018984c, baseAddr + 0x0021bd14, baseAddr + 0x0018984c };
+	int *screen_height[] = { baseAddr + 0x00189850, baseAddr + 0x0021bd18, baseAddr + 0x00189850 };
 
-	float xmult = (1.0f / (float)*screen_width) * 2.0f;
-	float ymult = (1.0f / (float)*screen_height) * 2.0f;
+	float xmult = (1.0f / (float)*(screen_width[currentModule])) * 2.0f;
+	float ymult = (1.0f / (float)*(screen_height[currentModule])) * 2.0f;
 	float xdisp = 1.0f;
 	float ydisp = 1.0f;
 	//float xdisp = 1.0f - (xmult * 0.125f);
@@ -572,12 +572,16 @@ uint8_t validateShard(renderVertex *vertices, int count) {
 	return isValid;
 }
 
-void transformCoords(renderVertex *vertices, int count) {
-	int *screen_width = 0x029d6fe4;
-	int *screen_height = 0x029d6fe8;
+int aaa = 640;
+int bbb = 480;
 
-	float xmult = (1.0f / ((float)*screen_width)) * 2.0f;
-	float ymult = (1.0f / ((float)*screen_height)) * 2.0f;
+void transformCoords(renderVertex *vertices, int count) {
+	uint32_t baseAddr = *((uint32_t *)0x539db4);
+	int *screen_width[] = { baseAddr + 0x0018984c, baseAddr + 0x0021bd14, baseAddr + 0x0018984c };
+	int *screen_height[] = { baseAddr + 0x00189850, baseAddr + 0x0021bd18, baseAddr + 0x00189850 };
+
+	float xmult = (1.0f / ((float)*(screen_width[currentModule]))) * 2.0f;
+	float ymult = (1.0f / ((float)*(screen_height[currentModule]))) * 2.0f;
 	// 0.125 of a pixel added to help align scaled elements to a single pixel (important for UI)
 	float xdisp = 1.0f - (xmult * 0.125f);
 	float ydisp = 1.0f - (ymult * 0.125f);
@@ -586,13 +590,13 @@ void transformCoords(renderVertex *vertices, int count) {
 	uint8_t on_screen = 0;
 
 	for (int i = 0; i < count; i++) {
-		if (vertices[i].y <= (float)*screen_height) {
+		if (vertices[i].y <= (float)*(screen_height[currentModule])) {
 			on_screen = 1;
 		}
 	}
 
 	for (int i = 0; i < count; i++) {
-		if (vertices[i].y > 4369.0f - (float)*screen_height && on_screen) {
+		if (vertices[i].y > 4369.0f - (float)*(screen_height[currentModule]) && on_screen) {
 			vertices[i].y -= 4369.0f;
 		}
 	}
@@ -604,11 +608,12 @@ void transformCoords(renderVertex *vertices, int count) {
 }
 
 void transformCoordsLine(renderVertex *vertices, int count) {
-	int *screen_width = 0x029d6fe4;
-	int *screen_height = 0x029d6fe8;
+	uint32_t baseAddr = *((uint32_t *)0x539db4);
+	int *screen_width[] = { baseAddr + 0x0018984c, baseAddr + 0x0021bd14, baseAddr + 0x0018984c };
+	int *screen_height[] = { baseAddr + 0x00189850, baseAddr + 0x0021bd18, baseAddr + 0x00189850 };
 
-	float xmult = (1.0f / ((float)*screen_width)) * 2.0f;
-	float ymult = (1.0f / ((float)*screen_height)) * 2.0f;
+	float xmult = (1.0f / ((float)*(screen_width[currentModule]))) * 2.0f;
+	float ymult = (1.0f / ((float)*(screen_height[currentModule]))) * 2.0f;
 	float xdisp = 1.0f + (xmult * 0.5);
 	float ydisp = 1.0f + (ymult * 0.5);
 
@@ -616,13 +621,13 @@ void transformCoordsLine(renderVertex *vertices, int count) {
 	uint8_t on_screen = 0;
 
 	for (int i = 0; i < count; i++) {
-		if (vertices[i].y <= (float)*screen_height) {
+		if (vertices[i].y <= (float)*(screen_height[currentModule])) {
 			on_screen = 1;
 		}
 	}
 
 	for (int i = 0; i < count; i++) {
-		if (vertices[i].y > 4368.0f - (float)*screen_height && on_screen) {
+		if (vertices[i].y > 4368.0f - (float)*(screen_height[currentModule]) && on_screen) {
 			vertices[i].y -= 4368.0f;
 		}
 	}
@@ -687,10 +692,13 @@ void fixUVs(renderVertex *vertices, int count, struct texture *tex) {
 }
 
 void renderLineF2(int *tag) {
+	uint32_t baseAddr = *((uint32_t *)0x539db4);
+	uint32_t *alphaBlend[] = { baseAddr + 0x001885a4, baseAddr + 0x0021b03c, baseAddr + 0x001885a4 };
+
 	uint8_t r = *((uint8_t *)tag + 4);
 	uint8_t g = *((uint8_t *)tag + 5);
 	uint8_t b = *((uint8_t *)tag + 6);
-	uint8_t alpha = *((uint32_t *)0x0069c8b0) >> 24;
+	uint8_t alpha = *(alphaBlend[currentModule]) >> 24;
 
 	uint32_t color = r + (g << 8) + (b << 16) + (alpha << 24);
 	
@@ -712,10 +720,13 @@ void renderLineF2(int *tag) {
 }
 
 void renderLineF3(int *tag) {
+	uint32_t baseAddr = *((uint32_t *)0x539db4);
+	uint32_t *alphaBlend[] = { baseAddr + 0x001885a4, baseAddr + 0x0021b03c, baseAddr + 0x001885a4 };
+
 	uint8_t r = *((uint8_t *)tag + 4);
 	uint8_t g = *((uint8_t *)tag + 5);
 	uint8_t b = *((uint8_t *)tag + 6);
-	uint8_t alpha = *((uint32_t *)0x0069c8b0) >> 24;
+	uint8_t alpha = *(alphaBlend[currentModule]) >> 24;
 
 	uint32_t color = r + (g << 8) + (b << 16) + (alpha << 24);
 	
@@ -741,10 +752,13 @@ void renderLineF3(int *tag) {
 }
 
 void renderLineF4(int *tag) {
+	uint32_t baseAddr = *((uint32_t *)0x539db4);
+	uint32_t *alphaBlend[] = { baseAddr + 0x001885a4, baseAddr + 0x0021b03c, baseAddr + 0x001885a4 };
+
 	uint8_t r = *((uint8_t *)tag + 4);
 	uint8_t g = *((uint8_t *)tag + 5);
 	uint8_t b = *((uint8_t *)tag + 6);
-	uint8_t alpha = *((uint32_t *)0x0069c8b0) >> 24;
+	uint8_t alpha = *(alphaBlend[currentModule]) >> 24;
 
 	uint32_t color = r + (g << 8) + (b << 16) + (alpha << 24);
 	
@@ -774,7 +788,10 @@ void renderLineF4(int *tag) {
 }
 
 void renderLineG2(int *tag) {
-	uint8_t alpha = *((uint32_t *)0x0069c8b0) >> 24;
+	uint32_t baseAddr = *((uint32_t *)0x539db4);
+	uint32_t *alphaBlend[] = { baseAddr + 0x001885a4, baseAddr + 0x0021b03c, baseAddr + 0x001885a4 };
+
+	uint8_t alpha = *(alphaBlend[currentModule]) >> 24;
 	
 	uint32_t color1 = unormColor(*((uint8_t *)tag + 4), *((uint8_t *)tag + 5), *((uint8_t *)tag + 6), alpha);
 	int16_t x1 = *(int16_t *)((uint8_t *)tag + 8);
@@ -797,10 +814,13 @@ void renderLineG2(int *tag) {
 }
 
 void renderPolyF3(int *tag) {
+	uint32_t baseAddr = *((uint32_t *)0x539db4);
+	uint32_t *alphaBlend[] = { baseAddr + 0x001885a4, baseAddr + 0x0021b03c, baseAddr + 0x001885a4 };
+
 	uint8_t r = *((uint8_t *)tag + 4);
 	uint8_t g = *((uint8_t *)tag + 5);
 	uint8_t b = *((uint8_t *)tag + 6);
-	uint8_t alpha = *((uint32_t *)0x0069c8b0) >> 24;
+	uint8_t alpha = *(alphaBlend[currentModule]) >> 24;
 
 	uint32_t color = r + (g << 8) + (b << 16) + (alpha << 24);
 	
@@ -829,10 +849,13 @@ void renderPolyF3(int *tag) {
 }
 
 void renderPolyF4(int *tag) {
+	uint32_t baseAddr = *((uint32_t *)0x539db4);
+	uint32_t *alphaBlend[] = { baseAddr + 0x001885a4, baseAddr + 0x0021b03c, baseAddr + 0x001885a4 };
+
 	uint8_t r = *((uint8_t *)tag + 4);
 	uint8_t g = *((uint8_t *)tag + 5);
 	uint8_t b = *((uint8_t *)tag + 6);
-	uint8_t alpha = *((uint32_t *)0x0069c8b0) >> 24;
+	uint8_t alpha = *(alphaBlend[currentModule]) >> 24;
 
 	uint32_t color = r + (g << 8) + (b << 16) + (alpha << 24);
 	
@@ -866,13 +889,15 @@ void renderPolyF4(int *tag) {
 }
 
 void renderPolyFT3(int *tag) {
+	uint32_t baseAddr = *((uint32_t *)0x539db4);
+	uint32_t *alphaBlend[] = { baseAddr + 0x001885a4, baseAddr + 0x0021b03c, baseAddr + 0x001885a4 };
 	if (*(int *)((uint8_t *)tag + 36)) {
 		struct texture *tex = *(uint32_t **)(*(int *)((uint8_t *)tag + 36) + 0x14);
 
 		uint8_t r = *((uint8_t *)tag + 4);
 		uint8_t g = *((uint8_t *)tag + 5);
 		uint8_t b = *((uint8_t *)tag + 6);
-		uint8_t alpha = *((uint32_t *)0x0069c8b0) >> 24;
+		uint8_t alpha = *(alphaBlend[currentModule]) >> 24;
 
 		uint32_t color = r + (g << 8) + (b << 16) + (alpha << 24);
 	
@@ -911,13 +936,16 @@ void renderPolyFT3(int *tag) {
 }
 
 void renderPolyFT4(int *tag) {
+	uint32_t baseAddr = *((uint32_t *)0x539db4);
+	uint32_t *alphaBlend[] = { baseAddr + 0x001885a4, baseAddr + 0x0021b03c, baseAddr + 0x001885a4 };
+	//log_printf(LL_INFO, "FT4\n");
 	if (*(int *)((uint8_t *)tag + 44)) {
 		struct texture *tex = *(uint32_t **)(*(int *)((uint8_t *)tag + 44) + 0x14);
 
 		uint8_t r = *((uint8_t *)tag + 4);
 		uint8_t g = *((uint8_t *)tag + 5);
 		uint8_t b = *((uint8_t *)tag + 6);
-		uint8_t alpha = *((uint32_t *)0x0069c8b0) >> 24;
+		uint8_t alpha = *(alphaBlend[currentModule]) >> 24;
 
 		uint32_t color = r + (g << 8) + (b << 16) + (alpha << 24);
 	
@@ -964,7 +992,9 @@ void renderPolyFT4(int *tag) {
 }
 
 void renderPolyG3(int *tag) {
-	uint8_t alpha = *((uint32_t *)0x0069c8b0) >> 24;
+	uint32_t baseAddr = *((uint32_t *)0x539db4);
+	uint32_t *alphaBlend[] = { baseAddr + 0x001885a4, baseAddr + 0x0021b03c, baseAddr + 0x001885a4 };
+	uint8_t alpha = *(alphaBlend[currentModule]) >> 24;
 
 	uint32_t color1 = unormColor(*((uint8_t *)tag + 4), *((uint8_t *)tag + 5), *((uint8_t *)tag + 6), alpha);
 	int16_t x1 = *(int16_t *)((uint8_t *)tag + 8);
@@ -996,7 +1026,9 @@ void renderPolyG3(int *tag) {
 }
 
 void renderPolyG4(int *tag) {
-	uint8_t alpha = *((uint32_t *)0x0069c8b0) >> 24;
+	uint32_t baseAddr = *((uint32_t *)0x539db4);
+	uint32_t *alphaBlend[] = { baseAddr + 0x001885a4, baseAddr + 0x0021b03c, baseAddr + 0x001885a4 };
+	uint8_t alpha = *(alphaBlend[currentModule]) >> 24;
 
 	uint32_t color1 = unormColor(*((uint8_t *)tag + 4), *((uint8_t *)tag + 5), *((uint8_t *)tag + 6), alpha);
 	int16_t x1 = *(int16_t *)((uint8_t *)tag + 8);
@@ -1035,13 +1067,16 @@ void renderPolyG4(int *tag) {
 }
 
 void renderPolyGT3(int *tag) {
+	uint32_t baseAddr = *((uint32_t *)0x539db4);
+	uint32_t *alphaBlend[] = { baseAddr + 0x001885a4, baseAddr + 0x0021b03c, baseAddr + 0x001885a4 };
+
 	if (*(int *)((uint8_t *)tag + 44)) {
 		struct texture *tex = *(uint32_t **)(*(int *)((uint8_t *)tag + 44) + 0x14);
 
 		uint8_t r = *((uint8_t *)tag + 4);
 		uint8_t g = *((uint8_t *)tag + 5);
 		uint8_t b = *((uint8_t *)tag + 6);
-		uint8_t alpha = *((uint32_t *)0x0069c8b0) >> 24;
+		uint8_t alpha = *(alphaBlend[currentModule]) >> 24;
 	
 		uint32_t color1 = unormColor(*((uint8_t *)tag + 4), *((uint8_t *)tag + 5), *((uint8_t *)tag + 6), alpha);
 		int16_t x1 = *(int16_t *)((uint8_t *)tag + 8);
@@ -1081,13 +1116,16 @@ void renderPolyGT3(int *tag) {
 }
 
 void renderPolyGT4(int *tag) {
+	uint32_t baseAddr = *((uint32_t *)0x539db4);
+	uint32_t *alphaBlend[] = { baseAddr + 0x001885a4, baseAddr + 0x0021b03c, baseAddr + 0x001885a4 };
+
 	if (*(int *)((uint8_t *)tag + 56)) {
 		struct texture *tex = *(uint32_t **)(*(int *)((uint8_t *)tag + 56) + 0x14);
 
 		uint8_t r = *((uint8_t *)tag + 4);
 		uint8_t g = *((uint8_t *)tag + 5);
 		uint8_t b = *((uint8_t *)tag + 6);
-		uint8_t alpha = *((uint32_t *)0x0069c8b0) >> 24;
+		uint8_t alpha = *(alphaBlend[currentModule]) >> 24;
 	
 		uint32_t color1 = unormColor(*((uint8_t *)tag + 4), *((uint8_t *)tag + 5), *((uint8_t *)tag + 6), alpha);
 		int16_t x1 = *(int16_t *)((uint8_t *)tag + 8);
@@ -1136,10 +1174,13 @@ void renderPolyGT4(int *tag) {
 }
 
 void renderTile(int *tag) {
+	uint32_t baseAddr = *((uint32_t *)0x539db4);
+	uint32_t *alphaBlend[] = { baseAddr + 0x001885a4, baseAddr + 0x0021b03c, baseAddr + 0x001885a4 };
+
 	uint8_t r = *((uint8_t *)tag + 4);
 	uint8_t g = *((uint8_t *)tag + 5);
 	uint8_t b = *((uint8_t *)tag + 6);
-	uint8_t alpha = *((uint32_t *)0x0069c8b0) >> 24;
+	uint8_t alpha = *(alphaBlend[currentModule]) >> 24;
 
 	uint32_t color = r + (g << 8) + (b << 16) + (alpha << 24);
 
@@ -1196,8 +1237,9 @@ void renderTile16(int *tag) {
 }
 
 void changeViewport(int *tag) {
-	int *screen_width = 0x029d6fe4;
-	int *screen_height = 0x029d6fe8;
+	uint32_t baseAddr = *((uint32_t *)0x539db4);
+	int *screen_width[] = { baseAddr + 0x0018984c, baseAddr + 0x0021bd14, baseAddr + 0x0018984c };
+	int *screen_height[] = { baseAddr + 0x00189850, baseAddr + 0x0021bd18, baseAddr + 0x00189850 };
 
 	// all values are based on the original resolution of 512x240
 	float x = *(int16_t*)((uint8_t*)tag + 8);
@@ -1231,9 +1273,16 @@ void changeViewport(int *tag) {
 }
 
 void D3DPOLY_DrawOTag(int *tag) {
-	uint32_t *polyFlags = 0x0065c8ac;
-	uint32_t *alphaBlend = 0x0069c8b0;
-	uint32_t *nextPSXBlendMode = 0x0069d10c;
+	uint32_t baseAddr = *((uint32_t *)0x539db4);
+	//uint32_t *polyFlags[] = { baseAddr + 0x001485a0, baseAddr + 0x001485a0, baseAddr + 0x001485a0 };
+	uint32_t *alphaBlend[] = { baseAddr + 0x001885a4, baseAddr + 0x0021b03c, baseAddr + 0x001885a4 };
+	uint32_t *nextPSXBlendMode[] = { baseAddr + 0x00188dfc, baseAddr + 0x0021b894, baseAddr + 0x00188dfc };
+
+	//uint32_t baseAddr = *((uint32_t *)0x539db4);
+	int *screen_width[] = { baseAddr + 0x0018984c, baseAddr + 0x0021bd14, baseAddr + 0x0018984c };
+	int *screen_height[] = { baseAddr + 0x00189850, baseAddr + 0x0021bd18, baseAddr + 0x00189850 };
+
+	//log_printf(LL_INFO, "SCREEN W: %d H: %d\n", *(screen_width[currentModule]), *(screen_height[currentModule]));
 
 	if (isMinimized) {
 		return;
@@ -1269,38 +1318,38 @@ void D3DPOLY_DrawOTag(int *tag) {
 					setDepthState(renderer, 1, 0);
 
 					if (otherBlendMode) {
-						*nextPSXBlendMode = (blendMode >> 5) & 3;
+						*(nextPSXBlendMode[currentModule]) = (blendMode >> 5) & 3;
 					}
 
 					// alpha blending
-					switch(*nextPSXBlendMode) {
+					switch(*(nextPSXBlendMode[currentModule])) {
 					case 0:
-						*alphaBlend = 0x80000000;
+						*(alphaBlend[currentModule]) = 0x80000000;
 						// blend mode 1
 						setBlendState(renderer, 1);
 						break;
 					case 1:
-						*alphaBlend = 0xff000000;
+						*(alphaBlend[currentModule]) = 0xff000000;
 						// blend mode 2
 						setBlendState(renderer, 2);
 						break;
 					case 2:
-						*alphaBlend = 0x00000000;
+						*(alphaBlend[currentModule]) = 0x00000000;
 						// blend mode 4
 						setBlendState(renderer, 4);
 						break;
 					case 3:
-						*alphaBlend = 0x40000000;
+						*(alphaBlend[currentModule]) = 0x40000000;
 						// blend mode 2
 						setBlendState(renderer, 2);
 						break;
 					default:
-						log_printf(LL_WARN, "unknown blend mode 0x%08x\n", *nextPSXBlendMode);
-						*alphaBlend = 0xff000000;
+						log_printf(LL_WARN, "unknown blend mode 0x%08x\n", *(nextPSXBlendMode[currentModule]));
+						*(alphaBlend[currentModule]) = 0xff000000;
 					}
 
 				} else {
-					*alphaBlend = 0xff000000;
+					*(alphaBlend[currentModule]) = 0xff000000;
 					setDepthState(renderer, 1, 1);
 					setBlendState(renderer, 1);
 				}
@@ -1362,7 +1411,7 @@ void D3DPOLY_DrawOTag(int *tag) {
 			} else if (cmd == 0xE1) {
 				// maybe blend mode
 				uint32_t blendMode = tag[1];
-				*nextPSXBlendMode = (blendMode >> 5) & 3;
+				*(nextPSXBlendMode[currentModule]) = (blendMode >> 5) & 3;
 			} else if (cmd == 0xE3) {
 				// set viewport
 				changeViewport(tag);
@@ -1374,28 +1423,32 @@ void D3DPOLY_DrawOTag(int *tag) {
 	}
 }
 
-void *(*createGameTexture)() = 0x4d6a70;
+//void *(*createGameTexture)() = 0x4d6a70;
 
 
 void D3DTEX_Init() {
 	//setup 16 bit format:
-	uint32_t *r_bits = 0x0069d148;
-	uint32_t *g_bits = 0x0069d14c;
-	uint32_t *b_bits = 0x0069d150;
-	uint32_t *a_bits = 0x0069d154;
-	uint32_t *r_offset = 0x0069d158;
-	uint32_t *g_offset = 0x0069d15c;
-	uint32_t *b_offset = 0x0069d160;
-	uint32_t *a_offset = 0x0069d164;
+	uint32_t baseAddr = *((uint32_t *)0x539db4);
 
-	*r_bits = 5;
-	*g_bits = 5;
-	*b_bits = 5;
-	*a_bits = 1;
-	*r_offset = 0;
-	*g_offset = 5;
-	*b_offset = 10;
-	*a_offset = 15;
+	uint32_t *r_bits[] = { baseAddr + 0x00189058, baseAddr + 0x0021baf0, baseAddr + 0x0069d148 };
+	uint32_t *g_bits[] = { baseAddr + 0x0018905c, baseAddr + 0x0021baf4, baseAddr + 0x0 };
+	uint32_t *b_bits[] = { baseAddr + 0x00189060, baseAddr + 0x0021baf8, baseAddr + 0x0 };
+	uint32_t *a_bits[] = { baseAddr + 0x00189064, baseAddr + 0x0021bafc, baseAddr + 0x0 };
+	uint32_t *r_offset[] = { baseAddr + 0x00189068, baseAddr + 0x0021bb00, baseAddr + 0x0 };
+	uint32_t *g_offset[] = { baseAddr + 0x0018906c, baseAddr + 0x0021bb04, baseAddr + 0x0 };
+	uint32_t *b_offset[] = { baseAddr + 0x00189070, baseAddr + 0x0021bb08, baseAddr + 0x0 };
+	uint32_t *a_offset[] = { baseAddr + 0x00189074, baseAddr + 0x0021bb0c, baseAddr + 0x0 };
+
+	*(r_bits[currentModule]) = 5;
+	*(g_bits[currentModule]) = 5;
+	*(b_bits[currentModule]) = 5;
+	*(a_bits[currentModule]) = 1;
+	*(r_offset[currentModule]) = 0;
+	*(g_offset[currentModule]) = 5;
+	*(b_offset[currentModule]) = 10;
+	*(a_offset[currentModule]) = 15;
+
+	log_printf(LL_INFO, "D3DTEX_INIT DONE!!!\n");
 }
 
 void D3DTEX_ConvertTexturePalette(uint16_t *palette, int size) {
@@ -1461,20 +1514,22 @@ struct bitmapheader {
 
 void *openExternalTextureWrapper(char *a, char *b) {
 	// wrapper to cancel any high res loads if they're not enabled
-	void *(__cdecl *openExternalTexture)(char *, char *) = 0x004d5fe0;
+	uint32_t baseAddr = *((uint32_t *)0x539db4);
+	void *(__cdecl *openExternalTexture[])(char *, char *) = { baseAddr + 0x0, baseAddr + 0x0006c790, baseAddr + 0x0 };
 	
 	if (useHiResTextures) {
-		return openExternalTexture(a, b);
+		return openExternalTexture[currentModule](a, b);
 	} else {
 		return -1;
 	}
 }
 
 void makeTextureListEntry(struct texture *a, int b, int c, int d) {
-	int **palFront = 0x0069d174;
+	uint32_t baseAddr = *((uint32_t *)0x539db4);
+	int **palFront[] = { baseAddr + 0x001891c8, baseAddr + 0x0021bc60, baseAddr + 0x001891c8 };
 
 	if (a->palette == NULL) {
-		int *pal = *palFront;
+		int *pal = *(palFront[currentModule]);
 		while (pal) {
 			//printf("palette: 0x%08x\n", *pal);
 			if (*pal == b) {
@@ -1487,7 +1542,7 @@ void makeTextureListEntry(struct texture *a, int b, int c, int d) {
 
 		if (!a->palette) {
 			log_printf(LL_WARN, "Palette Checksum not found: 0x%08x\n", b);
-			a->palette = *palFront;
+			a->palette = *(palFront[currentModule]);
 		} else {
 			//printf("Found!\n");
 		}
@@ -1603,18 +1658,71 @@ void makeTextureListEntry(struct texture *a, int b, int c, int d) {
 					buf[(y * a->buf_width) + x] = r << 0 | g << 8 | b << 16 | alpha << 24;
 				}
 			}
+		} else if (*(uint32_t *)((uint8_t *)a->palette + 4) == 0xffff) {
+			log_printf(LL_INFO, "UNK TEXTURE FORMAT!!!\n");
+			for (int y = 0; y < a->buf_height; y++) {
+				for (int x = 0; x < a->buf_width; x++) {
+					//buf[(y * a->buf_width) + x] = ((x + y) % 2) ? colordark : colorlight;
+					buf[(y * a->buf_width) + x] = 0xff808080;
+				}
+			
+			}
+			// 4-bit
+			/*int linewidth = (a->width + (a->width % 2)) / 2;
+			linewidth += linewidth % 2;
+			for (int y = 0; y < a->height; y++) {
+				for (int x = 0; x < a->width; x++) {
+					uint32_t pixel_idx = ((y * linewidth) + (x / 2));
+					uint8_t color_idx = ((uint8_t *)a->img_data)[pixel_idx];
+
+					if (x % 2) {
+						color_idx = (color_idx & 0xf0) >> 4;
+					} else {
+						color_idx = color_idx & 0x0f;
+					}
+
+					uint16_t color = colors[color_idx];
+					if (color == 0) {
+						a->flags &= ~0x10;
+					}
+
+					uint8_t alpha = ((color >> 15) & 0x0001) * 255;
+					uint8_t r = ((float)((color >> 0) & 0x1f) / 31.0f) * 255.0f;
+					uint8_t g = ((float)((color >> 5) & 0x1f) / 31.0f) * 255.0f;
+					uint8_t b = ((float)((color >> 10) & 0x1f) / 31.0f) * 255.0f;
+
+					// if input was 16 for a channel, force it to 128 to smooth sky texture edge transitions out
+					if (r == 131) {
+						r = 128;
+					}
+					if (g == 131) {
+						g = 128;
+					}
+					if (b == 131) {
+						b = 128;
+					}
+
+					buf[(y * a->buf_width) + x] = r << 0 | g << 8 | b << 16 | alpha << 24;
+				}
+			}*/
 		} else {
 			
 		}
 			
 	} else {
-		int (__cdecl *PCread)(void *, void *, uint32_t) = 0x004e4ca0;
-		int (__cdecl *PCclose)(void *) = 0x004e4d90;
+		log_printf(LL_INFO, "TEST!!!\n");
+		int (__cdecl *PCread[])(void *, void *, uint32_t) = { baseAddr + 0x000212b0, baseAddr + 0x00077440, baseAddr + 0x000212b0 };
+		int (__cdecl *PCclose[])(void *) = { baseAddr + 0x00021380, baseAddr + 0x00077560, baseAddr + 0x00021380 };
 			
 		// replace with bitmap
 		void *bmpfile = NULL;
-		if (!(a->flags & 0x40)) {
-			bmpfile = openExternalTextureWrapper(a->tex_checksum, NULL);
+		if (!(a->flags & 0x80)) {
+			if (a->flags & 0x10) {
+				bmpfile = openExternalTextureWrapper(a->tex_checksum, NULL);
+			} else {
+				bmpfile = -1;
+			}
+			
 		} else {
 			bmpfile = openExternalTextureWrapper(NULL, a->img_data);
 		}
@@ -1622,37 +1730,39 @@ void makeTextureListEntry(struct texture *a, int b, int c, int d) {
 		uint8_t preheader[15];
 		struct bitmapheader header;
 
-		PCread(bmpfile, preheader, 14);
-		PCread(bmpfile, &header, 40);
+		if (bmpfile != -1) {
+			PCread[currentModule](bmpfile, preheader, 14);
+			PCread[currentModule](bmpfile, &header, 40);
 
-		uint32_t bytes_per_pixel = header.bpp >> 3;
-		uint32_t line_width = header.width * bytes_per_pixel;
-		if (line_width % 4) {
-			line_width += 4 - (line_width % 4);
-		}
-
-		uint8_t *linebuffer = malloc(line_width);
-
-		for (int y = 0; y < header.height; y++) {
-			PCread(bmpfile, linebuffer, line_width);
-
-			for (int x = 0; x < header.width; x++) {
-				uint32_t color = 0xFF000000;
-				color |= (uint32_t)linebuffer[(x * bytes_per_pixel) + 0] << 16;
-				color |= (uint32_t)linebuffer[(x * bytes_per_pixel) + 1] << 8;
-				color |= (uint32_t)linebuffer[(x * bytes_per_pixel) + 2] << 0;
-
-				if (color == 0xFFFF00FF) {
-					color = 0;
-				}
-
-				buf[((header.height - y - 1) * a->buf_width) + x] = color;
+			uint32_t bytes_per_pixel = header.bpp >> 3;
+			uint32_t line_width = header.width * bytes_per_pixel;
+			if (line_width % 4) {
+				line_width += 4 - (line_width % 4);
 			}
+
+			uint8_t *linebuffer = malloc(line_width);
+
+			for (int y = 0; y < header.height; y++) {
+				PCread[currentModule](bmpfile, linebuffer, line_width);
+
+				for (int x = 0; x < header.width; x++) {
+					uint32_t color = 0xFF000000;
+					color |= (uint32_t)linebuffer[(x * bytes_per_pixel) + 0] << 16;
+					color |= (uint32_t)linebuffer[(x * bytes_per_pixel) + 1] << 8;
+					color |= (uint32_t)linebuffer[(x * bytes_per_pixel) + 2] << 0;
+
+					if (color == 0xFFFF00FF) {
+						color = 0;
+					}
+
+					buf[((header.height - y - 1) * a->buf_width) + x] = color;
+				}
+			}
+
+			free(linebuffer);
+
+			PCclose[currentModule](bmpfile);
 		}
-
-		free(linebuffer);
-
-		PCclose(bmpfile);
 	}
 
 	updateTextureEntry(renderer, a->idx, a->buf_width, a->buf_height, buf);
@@ -1802,53 +1912,61 @@ typedef struct {
 	uint8_t *data;
 } D3DSprite;
 
-void *__fastcall D3DSprite_D3DSprite(D3DSprite *sprite, void *pad, int a, char *b, char c) {
-	void *(__cdecl *operator_new)(int sz) = 0x004fd32e;
-	void (__cdecl *operator_delete)(void *) = 0x004fd323;
-	void (__cdecl *D3DTEX_FreePaletteEntry)(void *, int) = 0x004d7680;
-	void (__cdecl *mem_delete)(void *) = 0x0046f460;
+void *__fastcall D3DSprite_D3DSprite(D3DSprite *sprite, void *pad, int a, char *b, char c, int d) {
+	return NULL;
+	/*uint32_t baseAddr = *((uint32_t *)0x539db4);
+
+	void *(__cdecl *operator_new[])(int sz) = { baseAddr + 0x00037dad, baseAddr + 0x00037dad, baseAddr + 0x00037dad };
+	void (__cdecl *operator_delete[])(void *) = { baseAddr + 0x00037b7f, baseAddr + 0x00037b7f, baseAddr + 0x00037b7f };
+	void (__cdecl *D3DTEX_FreePaletteEntry[])(void *, int) = { baseAddr + 0x000176a0, baseAddr + 0x000176a0, baseAddr + 0x000176a0 };
+	//void (__cdecl *mem_delete)(void *) = 0x0046f460;
 
 	sprite->data = NULL;
 
 	// presumably depth
 	if (c) {
-		D3DSprite **gBackground = 0x0069d118;
-		*gBackground = sprite;
+		D3DSprite **gBackground[] = { baseAddr + 0x00188e08, baseAddr + 0x00188e08, baseAddr + 0x00188e08 };
+		*(gBackground[currentModule]) = sprite;
 		sprite->unk_float = 0.01f;
 	} else {
 		sprite->unk_float = 0.9f;
 	}
 
-	sprite->texture = operator_new(sizeof(struct texture));
+	sprite->texture = operator_new[currentModule](sizeof(struct texture));
 	memset(sprite->texture, 0, sizeof(struct texture));
 
-	struct texture *(__cdecl *D3DTEX_AddToTextureList3)(int a, int b, int c, int d) = 0x004d6b40;
-	sprite->texture = D3DTEX_AddToTextureList3(a, sprite->texture, 1, b);
+	log_printf(LL_INFO, "WHAT DOES IT SAY???? %s\n", b);
+	if (strcmp(b, "psxtex") == 0) {
+		struct texture *(__cdecl *D3DTEX_AddToTextureList2[])(int a, int b, int c, int d, int e, int f, int g, int h) = { baseAddr + 0x00016a30, baseAddr + 0x00016a30, baseAddr + 0x00016a30 };
+		//                        (param_1,*this,(short)DAT_10189018,(short)DAT_1018901c,&DAT_10188e18,DAT_10189020,0,0x800);
+		sprite->texture = D3DTEX_AddToTextureList2[currentModule](a, sprite->texture, *(uint16_t *)(baseAddr + 0x00189018), *(uint16_t *)(baseAddr + 0x0018901c), *(uint16_t *)(baseAddr + 0x00188e18), *(uint16_t *)(baseAddr + 0x00189020), 0, 0x800);
+	} else {
+		struct texture *(__cdecl *D3DTEX_AddToTextureList3[])(int a, int b, int c, int d) = { baseAddr + 0x00016ad0, baseAddr + 0x00016ad0, baseAddr + 0x00016ad0 };
+		sprite->texture = D3DTEX_AddToTextureList3[currentModule](a, sprite->texture, 1, b);
 
-	//printf("texture info %d, %d, %d, 0x%08x 0x%08x 0x%08x\n", sprite->texture->width, sprite->texture->height, sprite->texture->idx, sprite->texture->flags, sprite->texture->unk[0], sprite->texture->unk[1]);
-	sprite->texture->flags |= 0x01000000;	// hack for drawing: don't multiply texture color 2x
+		//printf("texture info %d, %d, %d, 0x%08x 0x%08x 0x%08x\n", sprite->texture->width, sprite->texture->height, sprite->texture->idx, sprite->texture->flags, sprite->texture->unk[0], sprite->texture->unk[1]);
+		sprite->texture->flags |= 0x01000000;	// hack for drawing: don't multiply texture color 2x
 
-	if (!(sprite->texture->flags & 8) && sprite->texture->img_data) {
-		operator_delete(sprite->texture->img_data);
-		sprite->texture->img_data = NULL;
-		sprite->texture->flags = sprite->texture->flags & ~0x01;
+		if (!(sprite->texture->flags & 8) && sprite->texture->img_data) {
+			operator_delete[currentModule](sprite->texture->img_data);
+			sprite->texture->img_data = NULL;
+			sprite->texture->flags = sprite->texture->flags & ~0x01;
+		}
+
+		D3DTEX_FreePaletteEntry[currentModule](sprite->texture->palette, 1);
+		sprite->texture->palette = NULL;
+		sprite->texture->flags = sprite->texture->flags & ~0x20;
 	}
-
-	D3DTEX_FreePaletteEntry(sprite->texture->palette, 1);
-	sprite->texture->palette = NULL;
-	sprite->texture->flags = sprite->texture->flags & ~0x20;
-
-	mem_delete(a);
 
 	// create the texture
 	sprite->texture_count = 1;
 
-	sprite->textures = operator_new(0x2c * sprite->texture_count);
+	sprite->textures = operator_new[currentModule](0x2c * sprite->texture_count);
 	memset(sprite->textures, 0, 0x2c * sprite->texture_count);
 
 	sprite->unk_texture = NULL;
 
-	sprite->dimensions = operator_new(sizeof(int) * 4);
+	sprite->dimensions = operator_new[currentModule](sizeof(int) * 4);
 	sprite->dimensions[0] = 0;
 	sprite->dimensions[1] = 0;
 	sprite->dimensions[2] = sprite->texture->width;
@@ -1856,20 +1974,23 @@ void *__fastcall D3DSprite_D3DSprite(D3DSprite *sprite, void *pad, int a, char *
 
 	((uint32_t *)sprite->textures)[5] = sprite->texture;
 
-	return sprite;
+	return sprite;*/
 }
 
-void __fastcall D3DSprite_Draw(void *sprite, void *pad, int a, float b, float c) {
-	//printf("STUB: D3DSprite::Draw: 0x%08x, %f, %f\n", a, b, c);
+void __fastcall D3DSprite_Draw(void *sprite, void *pad, int a, float b, float c, float d, float e, float f) {
+	printf("STUB: D3DSprite::Draw: 0x%08x, %f, %f\n", a, b, c);
 }
 
 void __fastcall D3DSprite_Destroy(D3DSprite *sprite) {
-	void (__cdecl *operator_delete)(void *) = 0x004fd323;
+	/*
+	uint32_t baseAddr = *((uint32_t *)0x539db4);
+	void (__cdecl *operator_delete[])(void *) = { baseAddr + 0x00037b7f, baseAddr + 0x00037b7f, baseAddr + 0x00037b7f };
 
-	operator_delete(sprite->dimensions);
-	operator_delete(sprite->textures);
+	operator_delete[currentModule](sprite->dimensions);
+	operator_delete[currentModule](sprite->textures);
 	freeD3DTexture(sprite->texture->idx);
-	operator_delete(sprite->texture);
+	operator_delete[currentModule](sprite->texture);
+	*/
 }
 
 void WINMAIN_SwitchResolution() {
@@ -2113,11 +2234,14 @@ int setDepthWrapper(int face, int unk, float bias, float unk2) {
 }
 
 void installGfxPatches() {
-	patchJmp(0x004f5190, initDDraw);
-	patchJmp(0x004f41c0, initD3D);
+	patchJmp(0x004041c0, initDDraw);
+	patchJmp(0x004037b0, initD3D);
+
+	patchNop(0x0040502e, 5);
 	
-	patchJmp(0x004ce0d0, D3D_ClearBuffers);
+	patchJmp(0x00401740, D3D_ClearBuffers);
 	
+	/*
 	patchJmp(0x004d13f0, D3DPOLY_Init);
 	patchJmp(0x004d0d50, D3DPOLY_StartScene);
 	patchJmp(0x004d0370, D3DPOLY_DrawOTag);
@@ -2167,9 +2291,9 @@ void installGfxPatches() {
 	//patchDWord(0x0045ef62 + 2, &testthing);
 
 	//patchByte(0x004ced21, 0xEB);
-	patchNop(0x004ced21, 2);	// don't brighten sky dome in nyc
-	patchByte(0x004ced26, 0xEB);	// don't brighten sky in philadelphia
-	patchNop(0x004cde20, 2);	// fix philadelphia clear color
+	//patchNop(0x004ced21, 2);	// don't brighten sky dome in nyc
+	//patchByte(0x004ced26, 0xEB);	// don't brighten sky in philadelphia
+	//patchNop(0x004cde20, 2);	// fix philadelphia clear color
 
 	//patchByte(0x0045f808, 0xEB);	// unknown thing with hangar - i think this is water-related stuff meant for warehouse
 
@@ -2222,4 +2346,69 @@ void installGfxPatches() {
 	//patchDWord(0x00449c48 + 3, 0x808080ff);
 
 	installMoviePatches();
+	*/
+}
+
+void installModuleGfxPatches(int module, uint32_t baseAddr) {
+	switch(module) {
+	case 0:
+		patchJmp(baseAddr + 0x00011b30, D3DPOLY_Init);
+		//patchNop(baseAddr + 0x00011c35, 11);
+		patchJmp(baseAddr + 0x00011610, D3DPOLY_StartScene);
+		patchJmp(baseAddr + 0x000110b0, D3DPOLY_DrawOTag);
+		patchJmp(baseAddr + 0x00010d80, D3D_EndSceneAndFlip);
+		//patchJmp(baseAddr + 0x00015590, unkFunctionWithD3DStuff);
+	
+		patchJmp(baseAddr + 0x00017840, D3DTEX_Init);
+		//patchJmp(0x004d7430, D3DTEX_TextureCountColors);
+		//patchJmp(0x004d7120, D3DTEX_GrayTexture);
+		//patchJmp(0x004d7940, D3DTEX_ConvertTexturePalette);
+		patchJmp(baseAddr + 0x00015d20, makeTextureListEntry);
+
+		// patch freeD3DTexture to call our code
+		patchNop(baseAddr + 0x00015b4c, 71);
+		patchByte(baseAddr + 0x00015b4c, 0x50);	// PUSH EAX
+		patchCall(baseAddr + 0x00015b4c + 1, freeD3DTexture);
+
+		patchJmp(baseAddr + 0x00014a10, D3DSprite_D3DSprite);
+		patchJmp(baseAddr + 0x00014ce0, D3DSprite_Draw);
+		patchJmp(baseAddr + 0x00014c30, D3DSprite_Destroy);
+
+		//patchNop(baseAddr + 0x00005b1b, 3);
+
+		installMoviePatches(module, baseAddr);
+		break;
+	case 1:
+		patchJmp(baseAddr + 0x00068780, D3DPOLY_Init);
+		patchJmp(baseAddr + 0x00068260, D3DPOLY_StartScene);
+		patchJmp(baseAddr + 0x00067d00, D3DPOLY_DrawOTag);
+		patchJmp(baseAddr + 0x00065580, D3D_EndSceneAndFlip);
+	
+		patchJmp(baseAddr + 0x0006e860, D3DTEX_Init);
+		//patchJmp(0x004d7430, D3DTEX_TextureCountColors);
+		//patchJmp(0x004d7120, D3DTEX_GrayTexture);
+		//patchJmp(0x004d7940, D3DTEX_ConvertTexturePalette);
+		patchJmp(baseAddr + 0x0006c870, makeTextureListEntry);
+		patchCall(baseAddr + 0x0006c6b4, openExternalTextureWrapper);
+		patchCall(baseAddr + 0x0006d708, openExternalTextureWrapper);
+		patchCall(baseAddr + 0x0006dd11, openExternalTextureWrapper);
+		patchCall(baseAddr + 0x0006e38c, openExternalTextureWrapper);
+
+		// patch freeD3DTexture to call our code
+		patchNop(baseAddr + 0x0006c56c, 71);
+		patchByte(baseAddr + 0x0006c56c, 0x50);	// PUSH EAX
+		patchCall(baseAddr + 0x0006c56c + 1, freeD3DTexture);
+
+		patchJmp(baseAddr + 0x0006b4a0, D3DSprite_D3DSprite);
+		patchJmp(baseAddr + 0x0006b6c0, D3DSprite_Draw);
+		//patchJmp(baseAddr + 0x00014c30, D3DSprite_Destroy);
+
+		//patchNop(baseAddr + 0x00005b1b, 3);
+
+		//installMoviePatches(module, baseAddr);
+
+		//patchByte(baseAddr + 0x000af354, 'P');
+		break;
+	}
+
 }

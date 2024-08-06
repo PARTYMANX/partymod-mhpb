@@ -12,6 +12,7 @@ struct texture {
 	uint32_t tex_checksum;
 	// 0x10
 	uint32_t flags;
+	uint32_t tex_checksum_2;
 	// 0x14
 	uint16_t width;
 	uint16_t height;
@@ -23,6 +24,7 @@ struct texture {
 	uint16_t unk_height;
 
 	// 0x20
+	//int pad;
 	int *palette;
 
 	uint32_t unk[2];

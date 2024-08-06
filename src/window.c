@@ -92,7 +92,7 @@ HWND initWindow() {
 	SDL_DisplayMode displayMode;
 	SDL_GetDesktopDisplayMode(0, &displayMode);
 
-	window = SDL_CreateWindow("THPS2 - PARTYMOD", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, windowResX, windowResY, SDL_WINDOW_SHOWN | flags);
+	window = SDL_CreateWindow("MHPB - PARTYMOD", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, windowResX, windowResY, SDL_WINDOW_SHOWN | flags);
 
 	if (!window) {
 		log_printf(LL_ERROR, "Failed to create window! Error: %s\n", SDL_GetError());
@@ -107,6 +107,8 @@ HWND initWindow() {
 
 	registerEventHandler(handleWindowEvents);
 
+	printf("HWND = 0x%08x\n", windowHandle);
+
 	return windowHandle;
 }
 
@@ -115,5 +117,5 @@ void getWindowSize(int *w, int *h) {
 }
 
 void installWindowPatches() {
-	patchCall(0x004f4ff1 + 5, initWindow);
+	patchCall(0x00404f74 + 5, initWindow);
 }

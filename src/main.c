@@ -16,6 +16,7 @@
 #include <event.h>
 #include <window.h>
 #include <log.h>
+#include <util/hash.h>
 
 // disable the options menu entries for control and display options as they're no longer relevant
 void __fastcall OptionsMenuConstructorWrapper(uint8_t **optionsMenu) {
@@ -28,7 +29,7 @@ void __fastcall OptionsMenuConstructorWrapper(uint8_t **optionsMenu) {
 	//optionsMenu[0xda][0xc] = 0;
 }
 
-void patchOptionsMenu() {
+/*void patchOptionsMenu() {
 
 	patchCall(0x0048185d, OptionsMenuConstructorWrapper);
 	// get rid of player controls menu
@@ -38,27 +39,7 @@ void patchOptionsMenu() {
 	// get rid of display controls menu
 	patchNop(0x0047f22d, 5);
 	patchByte(0x0047f240, 0xeb);
-}
-
-// load file patch
-void patchSaveOpen() {
-	patchByte(0x004e6249 + 1, 0);	// change file open for loading saves/replays to read instead of read and write
-}
-
-// bad autokick patch - not very graceful but it works until we can integrate it back into the menus
-uint32_t autokickSetting = 1;
-
-void handleAutokickOverride() {
-	uint32_t *autokickstate = 0x00567038;
-	uint32_t *autokickstate2 = 0x0055c88c;
-
-	*autokickstate = autokickSetting;
-	*autokickstate2 = autokickSetting;
-}
-
-void loadAutokickSetting() {
-	autokickSetting = getConfigBool("Miscellaneous", "Autokick", 1);
-}
+}*/
 
 void initPatch() {
 	GetModuleFileName(NULL, &executableDirectory, filePathBufLen);
@@ -96,8 +77,6 @@ void initPatch() {
 
 	initEvents();
 
-	loadAutokickSetting();
-
 	log_printf(LL_INFO, "Patch Initialized\n");
 }
 
@@ -126,21 +105,59 @@ void quitGame() {
 int WinYield() {
 	int result = 0x75;
 
-	// this gets called every frame, so hack in autokick override here (dumb but it works)
-	handleAutokickOverride();
-
 	handleEvents();
 
 	return result;
 }
 
 void patchWindowAndInit() {
-	patchNop(0x004f4ff1, 47);
-	patchCall(0x004f4ff1, initPatch);
+	//patchCall(0x00404f67, initPatch);
+	patchByte(0x004051a0 + 6, 1);
+	patchByte(0x004051aa + 6, 0);
+	patchNop(0x00404f74, 119);
+	patchNop(0x00404ffc, 39);
+	patchCall(0x00404f74, initPatch);
 	
-	patchJmp(0x004f4d70, WinYield);
+	patchJmp(0x00405f90, WinYield);
+}
 
-	patchNop(0x004f502b, 39);	// patch out window setup stuff that we no longer need
+extern int currentModule = -1;
+
+int (* _cdecl origLoadModule)(char *) = 0x004051e0;
+
+int _cdecl loadModuleWrapper(char *name) {
+	int result = origLoadModule(name);
+
+	uint32_t hash = memhash(name, strlen(name));
+	currentModule = -1;
+	switch(hash) {
+	case 0x9b7a3eb7:
+		log_printf(LL_INFO, "loading frontend module\n");
+		currentModule = 0;
+		break;
+	case 0x29ff8422:
+		log_printf(LL_INFO, "loading source module\n");
+		currentModule = 1;
+		break;
+	default:
+		log_printf(LL_INFO, "hash for %s is 0x%08x!!!\n", name, hash);
+	}
+
+	//0x539db4 = module offset
+	void *baseAddr = *((void **)0x539db4);
+	if (currentModule != -1) {
+		log_printf(LL_INFO, "INSTALLING MODULE PATCHES\n");
+		installModuleGfxPatches(currentModule, baseAddr);
+	}
+
+	return result;
+}
+
+void installModuleWrapper() {
+	patchCall(0x004010f3, loadModuleWrapper);
+	patchCall(0x00401164, loadModuleWrapper);
+	patchCall(0x004011c3, loadModuleWrapper);
+	patchCall(0x0040124c, loadModuleWrapper);
 }
 
 __declspec(dllexport) BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
@@ -151,13 +168,14 @@ __declspec(dllexport) BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, L
 			// Return FALSE to fail DLL load.
 
 			// install patches
-			//patchWindowAndInit();
-			//installWindowPatches();
+			patchWindowAndInit();
+			installWindowPatches();
 			//installInputPatches();
-			//installGfxPatches();
+			installGfxPatches();
 			//installMemPatches();
 			//patchSaveOpen();
 			//patchOptionsMenu();
+			installModuleWrapper();
 
 			//installAltMemManager();
 

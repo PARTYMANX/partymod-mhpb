@@ -430,6 +430,8 @@ uint8_t CreateVKRenderer(void *windowHandle, partyRenderer **renderer) {
 		goto error_free;
 	}
 
+	printf("HWND = 0x%08x\n", windowHandle);
+
 	r = createVulkanDevice(result->window, &(result->device));
 	if (r) {
 		fatalError("Failed to create Vulkan 1.3 device!  Make sure that you have the latest graphics drivers installed.");

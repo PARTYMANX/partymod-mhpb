@@ -23,6 +23,7 @@ uint32_t binkTexIdx = -1;
 uint32_t *binkBuffer = NULL;
 
 uint32_t __cdecl createBinkSurface() {
+	return 0;
 	uint32_t *gShellMode = 0x006a35b4;
 
 	binkBuffer = malloc(sizeof(uint32_t) * *BinkWidth * *BinkHeight);
@@ -111,16 +112,14 @@ void updateMovieTexture() {
 	}
 }
 
-void installMoviePatches() {
+void installMoviePatches(int module, uint32_t baseAddr) {
 	//patchJmp(0x004e3760, startBinkMovie);
-	patchJmp(0x004e3f70, stopBinkMovie);
-	patchJmp(0x004e3a60, advanceBinkMovie);
+	//patchJmp(0x004e3f70, stopBinkMovie);
+	//patchJmp(0x004e3a60, advanceBinkMovie);
 
-	patchJmp(0x004e31f0, createBinkSurface);
-	patchJmp(0x004e2c50, drawBinkSurface);
-	patchJmp(0x004e28f0, setupBinkRender);
+	patchJmp(baseAddr + 0x00021da0, createBinkSurface);
+	//patchJmp(0x004e2c50, drawBinkSurface);
+	//patchJmp(0x004e28f0, setupBinkRender);
 
-	patchByte(0x004e319c, 0xeb);	// remove d3d use from movie player
-
-	//patchJmp(0x004e1390, maybe_isBinkMovieOver); // actually i think this is controller stuff
+	//patchByte(0x004e319c, 0xeb);	// remove d3d use from movie player
 }
