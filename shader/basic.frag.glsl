@@ -15,9 +15,9 @@ void main() {
 		vec4 vertcolor = fcolor;
 		vec4 texcolor = texture(diffuse[ftexture], fuv);
 		if (texcolor.a == 0.0) {
-			if (texcolor.rgb == vec3(0.0) || fcolor.a == 1.0) {
+			//if (texcolor.rgb == vec3(0.0) || fcolor.a == 1.0) {
 				discard;
-			}
+			//}
 		}
 
 		if ((fflags & 1) != 0) {

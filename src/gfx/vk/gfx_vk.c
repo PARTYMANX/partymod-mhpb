@@ -118,7 +118,7 @@ VkResult initInstance() {
 	VkApplicationInfo appInfo;
 	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
 	appInfo.pNext = NULL;
-	appInfo.pApplicationName = "PARTYMOD for THPS2";
+	appInfo.pApplicationName = "PARTYMOD for MHPB";
 	appInfo.applicationVersion = VK_MAKE_VERSION(VERSION_NUMBER_MAJOR, VERSION_NUMBER_MINOR, VERSION_NUMBER_PATCH);
 	appInfo.pEngineName = "M3D";
 	appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
@@ -475,7 +475,7 @@ uint8_t CreateVKRenderer(void *windowHandle, partyRenderer **renderer) {
 	log_printf(LL_DEBUG, "Creating render targets...\n");
 
 	// create default render targets at 640x480, 4:3
-	createRenderTargets(result, 640, 480, VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_D16_UNORM);
+	createRenderTargets(result, 640, 480, VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_D24_UNORM_S8_UINT);
 	result->aspectRatio = 4.0f / 3.0f;
 	result->renderWidth = 640;
 	result->renderHeight = 480;
@@ -639,7 +639,7 @@ void startRender(partyRenderer *renderer, uint32_t clearCol) {
 	if (renderer->renderWidth != renderer->renderImage.width || renderer->renderHeight != renderer->renderImage.height) {
 		log_printf(LL_INFO, "Adjusting internal render resolution from %dx%d to %dx%d\n", renderer->renderImage.width, renderer->renderImage.height, renderer->renderWidth, renderer->renderHeight);
 		destroyRenderTargets(renderer);
-		createRenderTargets(renderer, renderer->renderWidth, renderer->renderHeight, VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_D16_UNORM);
+		createRenderTargets(renderer, renderer->renderWidth, renderer->renderHeight, VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_D24_UNORM_S8_UINT);
 
 		imageInfo info = { renderer->renderImage.width, renderer->renderImage.height };
 		imageInfo *buffer = mapBuffer(renderer, &renderer->renderImageInfoBuffer);

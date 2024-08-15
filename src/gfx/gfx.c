@@ -21,7 +21,7 @@ int resolution_x = 640;
 int resolution_y = 480;
 float aspectRatio = 4.0f / 3.0f;
 uint8_t textureFilter = 0;
-uint8_t useHiResTextures = 0;
+uint8_t useHiResTextures = 1;
 
 int isMinimized = 0;
 
@@ -94,7 +94,7 @@ void D3D_ClearBuffers() {
 
 void D3DPOLY_Init() {
 	//printf("STUB: D3DPOLY_Init\n");
-	log_printf(LL_INFO, "STUB: D3DPOLY_Init\n");
+	//log_printf(LL_INFO, "STUB: D3DPOLY_Init\n");
 
 	if (currentModule == -1) {
 		return;
@@ -103,8 +103,26 @@ void D3DPOLY_Init() {
 	uint32_t baseAddr = *((uint32_t *)0x539db4);
 
 	void (__cdecl *Init_PolyBuf[])() = { baseAddr + 0x000149b0, baseAddr + 0x0006b440, baseAddr + 0x000149b0 };
+	void (__cdecl *init_pushbacks[])() = { NULL, baseAddr + 0x000676b0, NULL};
+	void (__cdecl *unkfunc[])(float) = { NULL, baseAddr + 0x00068700, NULL};
 
+	if (init_pushbacks[currentModule] != NULL) {
+		//log_printf(LL_INFO, "SETTING UP PUSHBACKS\n");
+		init_pushbacks[currentModule]();
+
+		uint16_t *pushbacks = baseAddr + 0x000d8a04;
+		for (int i = 0; i < 51000; i++) {
+			if (pushbacks[i] != 0) {
+				//printf("PUSHBACK %d: %d\n", i, pushbacks[i]);
+			}
+		}
+	}
 	Init_PolyBuf[currentModule]();
+
+	/*if (unkfunc[currentModule] != NULL) {
+		log_printf(LL_INFO, "NO IDEA WHAT THIS DOES\n");
+		unkfunc[currentModule](1.5f);
+	}*/
 }
 
 uint32_t fixDXColor(uint32_t color) {
@@ -117,7 +135,7 @@ void D3DPOLY_StartScene(int a, int b) {
 	void (__cdecl *setupFog[])(int) = { baseAddr + 0x00011910, baseAddr + 0x00068560, baseAddr + 0x00011910 };
 	uint32_t *viewportClass[] = { baseAddr + 0x0018e548, baseAddr + 0x000bf308, baseAddr + 0x0018e548 };
 	uint16_t *DpqMin[] = { baseAddr + 0x0018e554, baseAddr + 0x000bf318, baseAddr + 0x0018e554 };
-	uint16_t *DpqMaxMaybe = *viewportClass + 10;
+	uint16_t *DpqMaxMaybe = *(viewportClass[currentModule]) + 10;
 	float *fogThreshold[] = { baseAddr + 0x00071d84, baseAddr + 0x000ae034, baseAddr + 0x00071d84 };
 	float *FogYonScale[] = { baseAddr + 0x00071d80, baseAddr + 0x000ae030, baseAddr + 0x00071d80 };
 	float *VideoFogYonScale[] = { baseAddr + 0x0007d9d0, baseAddr + 0x000b4f68, baseAddr + 0x0007d9d0 };
@@ -128,6 +146,12 @@ void D3DPOLY_StartScene(int a, int b) {
 
 	//float *fog = 0x00546b38;
 	//*fog = 10000.0f;
+
+	if (currentModule == 1) {
+		uint8_t *glevel = baseAddr + 0x00220a93;
+
+		//printf("LEVEL: 0x%08x\n", *glevel);
+	}
 
 	*(startscene[currentModule]) = 1;
 
@@ -184,8 +208,8 @@ inline uint32_t applyFog(uint32_t color_in, float depth) {
 	uint32_t *viewportClass[] = { baseAddr + 0x0018e548, baseAddr + 0x000bf308, baseAddr + 0x0018e548 };
 	float *fogThreshold[] = { baseAddr + 0x00071d84, baseAddr + 0x000ae034, baseAddr + 0x00071d84 };
 	float *FogYonScale[] = { baseAddr + 0x00071d80, baseAddr + 0x000ae030, baseAddr + 0x00071d80 };
-	uint16_t *someotherfogvalue = *viewportClass + 14;
-	uint16_t *DpqMaxMaybe = *viewportClass + 10;
+	uint16_t *someotherfogvalue = *(viewportClass[currentModule]) + 14;
+	uint16_t *DpqMaxMaybe = *(viewportClass[currentModule]) + 10;
 	uint32_t *aFog[] = { baseAddr + 0x00085c80, baseAddr + 0x00118718, baseAddr + 0x00071d80 };
 	uint32_t *rFog[] = { baseAddr + 0x0010616c, baseAddr + 0x00198c04, baseAddr + 0x00071d80 };
 	uint32_t *gFog[] = { baseAddr + 0x001485a4, baseAddr + 0x001db03c, baseAddr + 0x00071d80 };
@@ -372,7 +396,7 @@ void renderDXPoly(int *tag) {
 			alpha = 0xff000000;
 			// blend mode 2
 			setBlendState(renderer, 2);
-			setDepthState(renderer, 1, 1);
+			//setDepthState(renderer, 1, 1);
 			break;
 		case 0x100:
 			alpha = 0x00000000;
@@ -467,7 +491,7 @@ void renderDXPoly(int *tag) {
 			return;
 		}
 
-		if (!(tex->flags & 0x10)) {
+		if (!(tex->flags & 0x20)/* || (tex->flags & 0x02000000)*/) {
 			setDepthState(renderer, 1, 0);
 		}
 
@@ -971,6 +995,10 @@ void renderPolyFT4(int *tag) {
 		
 		float z = *(float *)((uint8_t *)tag + 40);
 		z = fixZ(z);
+
+		if (currentModule == 0 && color == 0xffffffff) {
+			color = 0xff808080;	// hack for menus to prevent overbrightening
+		}
 
 		renderVertex vertices[6];
 		vertices[0] = (renderVertex) { (float)x1, (float)y1, z, 1.0f, (float)u1, (float)v1, color, tex->idx, 0 };
@@ -1548,7 +1576,7 @@ void makeTextureListEntry(struct texture *a, int b, int c, int d) {
 		}
 		
 		if (a->palette && (uint16_t*)(a->palette[3]) && *(uint16_t*)(a->palette[3]) == 0) {
-			a->flags = a->flags | 0x100;
+			a->flags = a->flags | 0x200;
 		}
 	}
 
@@ -1587,7 +1615,7 @@ void makeTextureListEntry(struct texture *a, int b, int c, int d) {
 	if (!(a->flags & 8)) {
 		// load paletted image
 		uint16_t *colors = *(uint16_t **)((uint8_t *)a->palette + 8);
-		a->flags |= 0x10;
+		a->flags |= 0x20;
 			
 		if (*(uint32_t *)((uint8_t *)a->palette + 4) == 0x10) {
 			// 4-bit
@@ -1606,7 +1634,7 @@ void makeTextureListEntry(struct texture *a, int b, int c, int d) {
 
 					uint16_t color = colors[color_idx];
 					if (color == 0) {
-						a->flags &= ~0x10;
+						a->flags &= ~0x20;
 					}
 
 					uint8_t alpha = ((color >> 15) & 0x0001) * 255;
@@ -1636,7 +1664,7 @@ void makeTextureListEntry(struct texture *a, int b, int c, int d) {
 
 					uint16_t color = colors[color_idx];
 					if (color == 0) {
-						a->flags &= ~0x10;
+						a->flags &= ~0x20;
 					}
 
 					uint8_t alpha = ((color >> 15) & 0x0001) * 255;
@@ -1659,58 +1687,68 @@ void makeTextureListEntry(struct texture *a, int b, int c, int d) {
 				}
 			}
 		} else if (*(uint32_t *)((uint8_t *)a->palette + 4) == 0xffff) {
-			log_printf(LL_INFO, "UNK TEXTURE FORMAT!!!\n");
-			for (int y = 0; y < a->buf_height; y++) {
-				for (int x = 0; x < a->buf_width; x++) {
-					//buf[(y * a->buf_width) + x] = ((x + y) % 2) ? colordark : colorlight;
-					buf[(y * a->buf_width) + x] = 0xff808080;
-				}
-			
-			}
-			// 4-bit
-			/*int linewidth = (a->width + (a->width % 2)) / 2;
-			linewidth += linewidth % 2;
+			// some sort of 16-bit color.  dreamcast texture
+			int badalpha = 0;
+			int hasalpha = 0;
 			for (int y = 0; y < a->height; y++) {
 				for (int x = 0; x < a->width; x++) {
-					uint32_t pixel_idx = ((y * linewidth) + (x / 2));
-					uint8_t color_idx = ((uint8_t *)a->img_data)[pixel_idx];
+					uint16_t color = ((uint16_t *)a->img_data)[(y * a->width) + x];
 
-					if (x % 2) {
-						color_idx = (color_idx & 0xf0) >> 4;
+					if (a->flags & 0x2000) {
+						uint8_t alpha = ((float)((color >> 12) & 0x0f) / 15.0f) * 255.0f;
+						uint8_t r = ((float)((color >> 8) & 0x0f) / 15.0f) * 255.0f;
+						uint8_t g = ((float)((color >> 4) & 0x0f) / 15.0f) * 255.0f;
+						uint8_t b = ((float)((color >> 0) & 0x0f) / 15.0f) * 255.0f;
+
+						//if (alpha < 255) {
+							//a->flags &= ~0x20;
+						//}
+
+						hasalpha = 1;
+
+						buf[(y * a->buf_width) + x] = r << 0 | g << 8 | b << 16 | alpha << 24;
+					} else if (a->flags & 0x1000) {
+						uint8_t alpha = 0xff;
+						uint8_t r = ((float)((color >> 11) & 0x1f) / 31.0f) * 255.0f;
+						uint8_t g = ((float)((color >> 5) & 0x3f) / 63.0f) * 255.0f;
+						uint8_t b = ((float)((color >> 0) & 0x1f) / 31.0f) * 255.0f;
+
+						hasalpha = 1;
+
+						buf[(y * a->buf_width) + x] = r << 0 | g << 8 | b << 16 | alpha << 24;
 					} else {
-						color_idx = color_idx & 0x0f;
-					}
+						uint8_t alpha = ((color >> 15) & 0x0001) * 255;
+						uint8_t r = ((float)((color >> 10) & 0x1f) / 31.0f) * 255.0f;
+						uint8_t g = ((float)((color >> 5) & 0x1f) / 31.0f) * 255.0f;
+						uint8_t b = ((float)((color >> 0) & 0x1f) / 31.0f) * 255.0f;
+						
+						if (alpha > 0) {
+							hasalpha = 1;
+						}
 
-					uint16_t color = colors[color_idx];
-					if (color == 0) {
-						a->flags &= ~0x10;
+						buf[(y * a->buf_width) + x] = r << 0 | g << 8 | b << 16 | alpha << 24;
 					}
-
-					uint8_t alpha = ((color >> 15) & 0x0001) * 255;
-					uint8_t r = ((float)((color >> 0) & 0x1f) / 31.0f) * 255.0f;
-					uint8_t g = ((float)((color >> 5) & 0x1f) / 31.0f) * 255.0f;
-					uint8_t b = ((float)((color >> 10) & 0x1f) / 31.0f) * 255.0f;
-
-					// if input was 16 for a channel, force it to 128 to smooth sky texture edge transitions out
-					if (r == 131) {
-						r = 128;
-					}
-					if (g == 131) {
-						g = 128;
-					}
-					if (b == 131) {
-						b = 128;
-					}
-
-					buf[(y * a->buf_width) + x] = r << 0 | g << 8 | b << 16 | alpha << 24;
 				}
-			}*/
+			}
+
+			if (!hasalpha) {
+				for (int y = 0; y < a->height; y++) {
+					for (int x = 0; x < a->width; x++) {
+						if (buf[(y * a->buf_width) + x] != 0x00000000) {
+							
+							uint8_t r = buf[(y * a->buf_width) + x] >> 16;
+							uint8_t b = buf[(y * a->buf_width) + x];
+
+							buf[(y * a->buf_width) + x] = (buf[(y * a->buf_width) + x] & 0x0000ff00) | 0xff0000000 | r | b << 16;
+						}
+					}
+				}
+			}
 		} else {
-			
+			printf("UNKNOWN FORMAT????\n");
 		}
 			
 	} else {
-		log_printf(LL_INFO, "TEST!!!\n");
 		int (__cdecl *PCread[])(void *, void *, uint32_t) = { baseAddr + 0x000212b0, baseAddr + 0x00077440, baseAddr + 0x000212b0 };
 		int (__cdecl *PCclose[])(void *) = { baseAddr + 0x00021380, baseAddr + 0x00077560, baseAddr + 0x00021380 };
 			
@@ -1726,6 +1764,8 @@ void makeTextureListEntry(struct texture *a, int b, int c, int d) {
 		} else {
 			bmpfile = openExternalTextureWrapper(NULL, a->img_data);
 		}
+
+		a->flags |= 0x20;
 
 		uint8_t preheader[15];
 		struct bitmapheader header;
@@ -1751,7 +1791,7 @@ void makeTextureListEntry(struct texture *a, int b, int c, int d) {
 					color |= (uint32_t)linebuffer[(x * bytes_per_pixel) + 1] << 8;
 					color |= (uint32_t)linebuffer[(x * bytes_per_pixel) + 2] << 0;
 
-					if (color == 0xFFFF00FF) {
+					if (color == 0xFF000000 || color == 0xFFFF00FF) {
 						color = 0;
 					}
 
@@ -1762,8 +1802,46 @@ void makeTextureListEntry(struct texture *a, int b, int c, int d) {
 			free(linebuffer);
 
 			PCclose[currentModule](bmpfile);
+		} else {
+			if (a->img_data) {
+				memcpy(&header, (uint8_t *)(a->img_data + 14), 40);
+
+				uint32_t bytes_per_pixel = header.bpp >> 3;
+				uint32_t line_width = header.width * bytes_per_pixel;
+				if (line_width % 4) {
+					line_width += 4 - (line_width % 4);
+				}
+
+				uint8_t *linebuffer = malloc(line_width);
+
+				uint32_t pdata = a->img_data + 14 + 40;
+
+				for (int y = 0; y < header.height; y++) {
+					memcpy(linebuffer, pdata, line_width);
+
+					for (int x = 0; x < header.width; x++) {
+						uint32_t color = 0xFF000000;
+						color |= (uint32_t)linebuffer[(x * bytes_per_pixel) + 0] << 16;
+						color |= (uint32_t)linebuffer[(x * bytes_per_pixel) + 1] << 8;
+						color |= (uint32_t)linebuffer[(x * bytes_per_pixel) + 2] << 0;
+
+						if (color == 0xFFFF00FF) {
+							color = 0;
+						}
+
+						buf[((header.height - y - 1) * a->buf_width) + x] = color;
+					}
+
+					pdata += line_width;
+				}
+
+				free(linebuffer);
+			}
 		}
-	}
+	} 
+
+	a->unk_width = a->width;
+	a->unk_height = a->height;
 
 	updateTextureEntry(renderer, a->idx, a->buf_width, a->buf_height, buf);
 
@@ -1906,19 +1984,19 @@ typedef struct {
 	struct texture *texture;
 	struct texture *unk_texture;
 	int *dimensions;
-	int texture_count;
 	struct texture *textures;	// not actually texture but just an identically sized thing used when rendering.  weird.
 	float unk_float;
 	uint8_t *data;
+	int pad[2];
+	int texture_count;
 } D3DSprite;
 
 void *__fastcall D3DSprite_D3DSprite(D3DSprite *sprite, void *pad, int a, char *b, char c, int d) {
-	return NULL;
-	/*uint32_t baseAddr = *((uint32_t *)0x539db4);
+	uint32_t baseAddr = *((uint32_t *)0x539db4);
 
-	void *(__cdecl *operator_new[])(int sz) = { baseAddr + 0x00037dad, baseAddr + 0x00037dad, baseAddr + 0x00037dad };
-	void (__cdecl *operator_delete[])(void *) = { baseAddr + 0x00037b7f, baseAddr + 0x00037b7f, baseAddr + 0x00037b7f };
-	void (__cdecl *D3DTEX_FreePaletteEntry[])(void *, int) = { baseAddr + 0x000176a0, baseAddr + 0x000176a0, baseAddr + 0x000176a0 };
+	void *(__cdecl *operator_new[])(int sz) = { baseAddr + 0x00037dad, baseAddr + 0x0008f0a0, baseAddr + 0x00037dad };
+	void (__cdecl *operator_delete[])(void *) = { baseAddr + 0x00037b7f, baseAddr + 0x0008f095, baseAddr + 0x00037b7f };
+	void (__cdecl *D3DTEX_FreePaletteEntry[])(void *, int) = { baseAddr + 0x000176a0, baseAddr + 0x0006e5b0, baseAddr + 0x000176a0 };
 	//void (__cdecl *mem_delete)(void *) = 0x0046f460;
 
 	sprite->data = NULL;
@@ -1935,28 +2013,35 @@ void *__fastcall D3DSprite_D3DSprite(D3DSprite *sprite, void *pad, int a, char *
 	sprite->texture = operator_new[currentModule](sizeof(struct texture));
 	memset(sprite->texture, 0, sizeof(struct texture));
 
-	log_printf(LL_INFO, "WHAT DOES IT SAY???? %s\n", b);
 	if (strcmp(b, "psxtex") == 0) {
-		struct texture *(__cdecl *D3DTEX_AddToTextureList2[])(int a, int b, int c, int d, int e, int f, int g, int h) = { baseAddr + 0x00016a30, baseAddr + 0x00016a30, baseAddr + 0x00016a30 };
+		
+		struct texture *(__cdecl *D3DTEX_AddToTextureList2[])(int a, int b, int c, int d, int e, int f, int g, int h) = { baseAddr + 0x00016a30, baseAddr + 0x0006d580, baseAddr + 0x00016a30 };
 		//                        (param_1,*this,(short)DAT_10189018,(short)DAT_1018901c,&DAT_10188e18,DAT_10189020,0,0x800);
-		sprite->texture = D3DTEX_AddToTextureList2[currentModule](a, sprite->texture, *(uint16_t *)(baseAddr + 0x00189018), *(uint16_t *)(baseAddr + 0x0018901c), *(uint16_t *)(baseAddr + 0x00188e18), *(uint16_t *)(baseAddr + 0x00189020), 0, 0x800);
-	} else {
-		struct texture *(__cdecl *D3DTEX_AddToTextureList3[])(int a, int b, int c, int d) = { baseAddr + 0x00016ad0, baseAddr + 0x00016ad0, baseAddr + 0x00016ad0 };
+		uint16_t *unk1[] = { baseAddr + 0x00189018, baseAddr + 0x0021bab0, baseAddr + 0x0 }; 
+		uint16_t *unk2[] = { baseAddr + 0x0018901c, baseAddr + 0x0021bab4, baseAddr + 0x0 }; 
+		uint32_t *unk3[] = { baseAddr + 0x00188e18, baseAddr + 0x0021b8b0, baseAddr + 0x0 }; 
+		uint32_t *unk4[] = { baseAddr + 0x00189020, baseAddr + 0x0021bab8, baseAddr + 0x0 }; 
+		sprite->texture = D3DTEX_AddToTextureList2[currentModule](a, sprite->texture, *(unk1[currentModule]), *(unk2[currentModule]), unk3[currentModule], *(unk4[currentModule]), 0, 0x800);
+	} else if (strcmp(b, "rawbmp") == 0) {
+		struct texture *(__cdecl *D3DTEX_AddToTextureList3[])(int a, int b, int c, int d) = { baseAddr + 0x00016ad0, baseAddr + 0x0006d620, baseAddr + 0x00016ad0 };
 		sprite->texture = D3DTEX_AddToTextureList3[currentModule](a, sprite->texture, 1, b);
+	} else {
+		printf("D3DSPRITE: loading sprite type %s!!!\n", b);
+	}
 
-		//printf("texture info %d, %d, %d, 0x%08x 0x%08x 0x%08x\n", sprite->texture->width, sprite->texture->height, sprite->texture->idx, sprite->texture->flags, sprite->texture->unk[0], sprite->texture->unk[1]);
-		sprite->texture->flags |= 0x01000000;	// hack for drawing: don't multiply texture color 2x
+	if (!(sprite->texture->flags & 8) && sprite->texture->img_data) {
+		operator_delete[currentModule](sprite->texture->img_data);
+		sprite->texture->img_data = NULL;
+		sprite->texture->flags = sprite->texture->flags & ~0x01;
+	}
 
-		if (!(sprite->texture->flags & 8) && sprite->texture->img_data) {
-			operator_delete[currentModule](sprite->texture->img_data);
-			sprite->texture->img_data = NULL;
-			sprite->texture->flags = sprite->texture->flags & ~0x01;
-		}
-
+	if (sprite->texture->palette) {
 		D3DTEX_FreePaletteEntry[currentModule](sprite->texture->palette, 1);
 		sprite->texture->palette = NULL;
-		sprite->texture->flags = sprite->texture->flags & ~0x20;
 	}
+	sprite->texture->flags = sprite->texture->flags & ~0x20;
+
+	sprite->texture->flags |= 0x01000000;	// hack for drawing: don't multiply texture color 2x
 
 	// create the texture
 	sprite->texture_count = 1;
@@ -1972,25 +2057,26 @@ void *__fastcall D3DSprite_D3DSprite(D3DSprite *sprite, void *pad, int a, char *
 	sprite->dimensions[2] = sprite->texture->width;
 	sprite->dimensions[3] = sprite->texture->height;
 
+	sprite->pad[0] = sprite->texture->width;
+	sprite->pad[1] = sprite->texture->height;
+
 	((uint32_t *)sprite->textures)[5] = sprite->texture;
 
-	return sprite;*/
+	return sprite;
 }
 
 void __fastcall D3DSprite_Draw(void *sprite, void *pad, int a, float b, float c, float d, float e, float f) {
-	printf("STUB: D3DSprite::Draw: 0x%08x, %f, %f\n", a, b, c);
+	//printf("STUB: D3DSprite::Draw: 0x%08x, %f, %f\n", a, b, c);
 }
 
 void __fastcall D3DSprite_Destroy(D3DSprite *sprite) {
-	/*
 	uint32_t baseAddr = *((uint32_t *)0x539db4);
-	void (__cdecl *operator_delete[])(void *) = { baseAddr + 0x00037b7f, baseAddr + 0x00037b7f, baseAddr + 0x00037b7f };
+	void (__cdecl *operator_delete[])(void *) = { baseAddr + 0x00037b7f, baseAddr + 0x0008f095, baseAddr + 0x00037b7f };
 
 	operator_delete[currentModule](sprite->dimensions);
 	operator_delete[currentModule](sprite->textures);
 	freeD3DTexture(sprite->texture->idx);
 	operator_delete[currentModule](sprite->texture);
-	*/
 }
 
 void WINMAIN_SwitchResolution() {
@@ -2008,23 +2094,26 @@ void WINMAIN_SwitchResolution() {
 
 uint16_t PixelAspectYFov = 0x1000;
 
+// source - 27910
 void m3dinit_setresolution() {
-	int *width = 0x029d6fe4;
-	int *height = 0x029d6fe8;
+	uint32_t baseAddr = *((uint32_t *)0x539db4);
 
-	uint16_t *PixelAspectX = 0x005606cc;
-	uint16_t *PixelAspectY = 0x005606d0;
-	uint16_t *ResX = 0x0055ed00;
-	uint16_t *ResY = 0x0055ed18;
+	//int *width = 0x029d6fe4;
+	//int *height = 0x029d6fe8;
 
-	*ResX = *width;
-	*ResY = *height;
+	uint16_t *PixelAspectX[] = { baseAddr + 0x0, baseAddr + 0x000bf340, baseAddr + 0x0 };
+	uint16_t *PixelAspectY[] = { baseAddr + 0x0, baseAddr + 0x000bf344, baseAddr + 0x0 };
+	uint16_t *ResX[] = { baseAddr + 0x0, baseAddr + 0x0021bd14, baseAddr + 0x0 };
+	uint16_t *ResY[] = { baseAddr + 0x0, baseAddr + 0x0021bd18, baseAddr + 0x0 };
+
+	//*ResX = *width;
+	//*ResY = *height;
 
 	//*PixelAspectX = 0x1000;
 	//*PixelAspectY = ((*ResX * 0x3000) / (*ResY * 4));
 
-	*PixelAspectX = ((*ResY * 0x4000) / (*ResX * 3));
-	*PixelAspectY = 0x1000;
+	*(PixelAspectX[currentModule]) = ((*(ResY[currentModule]) * 0x4000) / (*(ResX[currentModule]) * 3));
+	*(PixelAspectY[currentModule]) = 0x1000;
 
 	/*if (*ResY << 2 < *ResX * 3) {
 		*PixelAspectX = 0x1000;
@@ -2093,12 +2182,6 @@ void WINMAIN_Configure() {
 	}
 
 	useHiResTextures = !getConfigBool(GRAPHICS_SECTION, "UsePSXTextures", 1);
-
-	uint32_t *is_software_renderer = 0x029d6ff0;
-	uint32_t *unk_related_to_sw_renderer = 0x00546cc4;
-
-	*is_software_renderer = 0;
-	*unk_related_to_sw_renderer = 1;
 }
 
 void SaveVidConfig() {
@@ -2371,7 +2454,7 @@ void installModuleGfxPatches(int module, uint32_t baseAddr) {
 		patchCall(baseAddr + 0x00015b4c + 1, freeD3DTexture);
 
 		patchJmp(baseAddr + 0x00014a10, D3DSprite_D3DSprite);
-		patchJmp(baseAddr + 0x00014ce0, D3DSprite_Draw);
+		//patchJmp(baseAddr + 0x00014ce0, D3DSprite_Draw);
 		patchJmp(baseAddr + 0x00014c30, D3DSprite_Destroy);
 
 		//patchNop(baseAddr + 0x00005b1b, 3);
@@ -2394,14 +2477,24 @@ void installModuleGfxPatches(int module, uint32_t baseAddr) {
 		patchCall(baseAddr + 0x0006dd11, openExternalTextureWrapper);
 		patchCall(baseAddr + 0x0006e38c, openExternalTextureWrapper);
 
+		patchJmp(baseAddr + 0x00027910, m3dinit_setresolution);
+
 		// patch freeD3DTexture to call our code
 		patchNop(baseAddr + 0x0006c56c, 71);
 		patchByte(baseAddr + 0x0006c56c, 0x50);	// PUSH EAX
 		patchCall(baseAddr + 0x0006c56c + 1, freeD3DTexture);
 
 		patchJmp(baseAddr + 0x0006b4a0, D3DSprite_D3DSprite);
-		patchJmp(baseAddr + 0x0006b6c0, D3DSprite_Draw);
-		//patchJmp(baseAddr + 0x00014c30, D3DSprite_Destroy);
+		//patchJmp(baseAddr + 0x0006b6c0, D3DSprite_Draw);
+		//patchJmp(baseAddr + 0x00014c30, D3DSprite_Destroy);	// never called????? memory leak????
+
+		//patchByte(baseAddr + 0x000654e3, 0xeb);
+		patchByte(baseAddr + 0x00066490, 0xeb);	// don't lighten construction sky
+		//patchByte(baseAddr + 0x00067144, 0xeb);
+		//patchByte(baseAddr + 0x00066283, 0xeb);
+		patchDWord(baseAddr + 0x00065536 + 1, 0xff0855e6);	// fix treatment plant sky clear color
+
+		//patchNop(baseAddr + 0x00067031, 2);	// no pushback for transparent textures (while retaining alpha depth stuff)
 
 		//patchNop(baseAddr + 0x00005b1b, 3);
 

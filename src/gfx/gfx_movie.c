@@ -6,25 +6,29 @@
 #include <gfx/vk/gfx_vk.h>
 #include <gfx/gfx_global.h>
 
-void (__stdcall **BinkClose)(void *) = 0x005152f4;
-void (__stdcall **BinkDoFrame)(void *) = 0x005152fc;
-void (__stdcall **BinkNextFrame)(void *) = 0x005152f0;
-void (__stdcall **BinkCopyToBuffer)(void *, void *, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t) = 0x005152f8;
-void (__stdcall **BinkGoto)(void *, int, int) = 0x005152e8;
+//void (__stdcall **BinkClose)(void *) = baseAddr + 0x00044188;
+//void (__stdcall **BinkDoFrame)(void *) = baseAddr + 0x0004418c;
+//void (__stdcall **BinkNextFrame)(void *) = baseAddr + 0x00044198;
+//void (__stdcall **BinkCopyToBuffer)(void *, void *, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t) = baseAddr + 0x00044190;
+//void (__stdcall **BinkGoto)(void *, int, int) = baseAddr + 0x00044194;
 
-void **pBink = 0x006a3934;
-uint8_t *BinkHasVideo = 0x006a3931;
-uint8_t *BinkIsPlaying = 0x006a394d;
-uint32_t *BinkWidth = 0x006a36e8;
-uint32_t *BinkHeight = 0x006a36ec;
+//void **pBink = baseAddr + 0x0018cb8c;
+//uint8_t *BinkHasVideo = baseAddr + 0x0018cb80;
+//uint8_t *BinkIsPlaying = baseAddr + 0x0018cb81;
+//uint32_t *BinkWidth = baseAddr + 0x0018c948;
+//uint32_t *BinkHeight = baseAddr + 0x0018c94c;
 
-struct texture *binkTex = 0x006a37e8;
+//struct texture *binkTex = baseAddr + 0x0018ca38;
 uint32_t binkTexIdx = -1;
 uint32_t *binkBuffer = NULL;
 
 uint32_t __cdecl createBinkSurface() {
-	return 0;
-	uint32_t *gShellMode = 0x006a35b4;
+	//uint32_t *gShellMode = 0x006a35b4;
+	uint32_t baseAddr = *((uint32_t *)0x539db4);
+
+	uint32_t *BinkWidth = baseAddr + 0x0018c948;
+	uint32_t *BinkHeight = baseAddr + 0x0018c94c;
+	struct texture *binkTex = baseAddr + 0x0018ca38;
 
 	binkBuffer = malloc(sizeof(uint32_t) * *BinkWidth * *BinkHeight);
 
@@ -37,9 +41,9 @@ uint32_t __cdecl createBinkSurface() {
 	binkTex->buf_width = *BinkWidth;
 	binkTex->buf_height = *BinkHeight;
 
-	struct texture **pBinkTex = 0x006a365c;
-	float *maxWidth = 0x006a3828;
-	float *maxHeight = 0x006a382c;
+	struct texture **pBinkTex = baseAddr + 0x0018c92c;
+	float *maxWidth = baseAddr + 0x0018ca78;
+	float *maxHeight = baseAddr + 0x0018ca7c;
 
 	*pBinkTex = binkTex;
 	*maxWidth = 1.0f;
@@ -49,6 +53,13 @@ uint32_t __cdecl createBinkSurface() {
 }
 
 void __cdecl stopBinkMovie() {
+	uint32_t baseAddr = *((uint32_t *)0x539db4);
+
+	void (__stdcall **BinkClose)(void *) = baseAddr + 0x00044188;
+
+	void **pBink = baseAddr + 0x0018cb8c;
+	uint8_t *BinkIsPlaying = baseAddr + 0x0018cb81;
+
 	if (*pBink) {
 		(*BinkClose)(*pBink);
 		*pBink = NULL;
@@ -63,7 +74,20 @@ void __cdecl stopBinkMovie() {
 }
 
 uint32_t __cdecl advanceBinkMovie() {
-	uint32_t *gShellMode = 0x006a35b4;
+	uint32_t baseAddr = *((uint32_t *)0x539db4);
+
+	void (__stdcall **BinkDoFrame)(void *) = baseAddr + 0x0004418c;
+	void (__stdcall **BinkNextFrame)(void *) = baseAddr + 0x00044198;
+	void (__stdcall **BinkCopyToBuffer)(void *, void *, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t) = baseAddr + 0x00044190;
+	void (__stdcall **BinkGoto)(void *, int, int) = baseAddr + 0x00044194;
+
+	void **pBink = baseAddr + 0x0018cb8c;
+	uint8_t *BinkHasVideo = baseAddr + 0x0018cb80;
+	uint8_t *BinkIsPlaying = baseAddr + 0x0018cb81;
+	uint32_t *BinkWidth = baseAddr + 0x0018c948;
+	uint32_t *BinkHeight = baseAddr + 0x0018c94c;
+
+	//uint32_t *gShellMode = 0x006a35b4;
 
 	if (!*pBink) {
 		*BinkIsPlaying = 0;
@@ -79,8 +103,8 @@ uint32_t __cdecl advanceBinkMovie() {
 		binkBuffer[i] |= 0xff000000;
 	}
 
-	if (!*BinkHasVideo != 0) {
-		updateTextureEntry(renderer, binkTexIdx, *BinkWidth, *BinkHeight, binkBuffer);
+	updateTextureEntry(renderer, binkTexIdx, *BinkWidth, *BinkHeight, binkBuffer);
+	if (*BinkHasVideo) {
 		renderImageFrame(renderer, binkTexIdx);
 	}
 
@@ -99,6 +123,11 @@ uint32_t __cdecl advanceBinkMovie() {
 }
 
 void __cdecl drawBinkSurface() {
+	uint32_t baseAddr = *((uint32_t *)0x539db4);
+
+	uint32_t *BinkWidth = baseAddr + 0x0018c948;
+	uint32_t *BinkHeight = baseAddr + 0x0018c94c;
+
 	updateTextureEntry(renderer, binkTexIdx, *BinkWidth, *BinkHeight, binkBuffer);
 	renderImageFrame(renderer, binkTexIdx);
 }
@@ -107,6 +136,13 @@ void __cdecl setupBinkRender() {
 }
 
 void updateMovieTexture() {
+	uint32_t baseAddr = *((uint32_t *)0x539db4);
+
+	void **pBink = baseAddr + 0x0018cb8c;
+
+	uint32_t *BinkWidth = baseAddr + 0x0018c948;
+	uint32_t *BinkHeight = baseAddr + 0x0018c94c;
+
 	if (*pBink) {
 		updateTextureEntry(renderer, binkTexIdx, *BinkWidth, *BinkHeight, binkBuffer);
 	}
@@ -115,7 +151,7 @@ void updateMovieTexture() {
 void installMoviePatches(int module, uint32_t baseAddr) {
 	//patchJmp(0x004e3760, startBinkMovie);
 	//patchJmp(0x004e3f70, stopBinkMovie);
-	//patchJmp(0x004e3a60, advanceBinkMovie);
+	patchJmp(baseAddr + 0x000222a0, advanceBinkMovie);
 
 	patchJmp(baseAddr + 0x00021da0, createBinkSurface);
 	//patchJmp(0x004e2c50, drawBinkSurface);
