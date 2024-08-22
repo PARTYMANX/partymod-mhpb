@@ -331,8 +331,8 @@ uint16_t pollController(SDL_GameController *controller) {
 uint32_t escState = 0;
 
 uint16_t pollKeyboard() {
-	int *gShellMode = 0x006a35b4;
-	uint8_t *isMenuOpen = 0x0069e050;
+	//int *gShellMode = 0x006a35b4;
+	//uint8_t *isMenuOpen = 0x0069e050;
 
 	uint32_t numKeys = 0;
 	uint8_t *keyboardState = SDL_GetKeyboardState(&numKeys);
@@ -352,9 +352,9 @@ uint16_t pollKeyboard() {
 	// to prevent esc double-pressing on menu transitions, process its state here.  
 	// escState = 1 means esc was pressed in menu, 2 means pressed out of menu, 0 is unpressed
 	if (keyboardState[SDL_SCANCODE_ESCAPE] && !escState) {
-		escState = (*isMenuOpen) ? 1 : 2;
+		//escState = (*isMenuOpen) ? 1 : 2;
 	} else if (!keyboardState[SDL_SCANCODE_ESCAPE]) {
-		escState = 0;
+		//escState = 0;
 	}
 
 	// buttons
@@ -414,98 +414,84 @@ int isKeyboardTyping() {
 	return 0;
 }
 
+uint16_t curControlData = 0x0000;
+uint16_t oldControlData = 0x0000;
+uint16_t buttonsDown = 0x0000;
+
 void __cdecl processController() {
-	int *gShellMode = 0x006a35b4;
+	//int *gShellMode = 0x006a35b4;
+	oldControlData = curControlData;
 
 	anyButtonPressed &= 2;
-	uint16_t controlData = 0;
+	curControlData = 0;
 
 	if (!isKeyboardTyping()) {
-		controlData |= pollKeyboard();
+		curControlData |= pollKeyboard();
 	}
 
 	// TODO: maybe smart selection of active controller?
 	for (int i = 0; i < controllerCount; i++) {
-		controlData |= pollController(controllerList[i]);
+		curControlData |= pollController(controllerList[i]);
 	}
 
-	uint32_t *gForcedButtons = 0x006a35bc;
-	uint32_t *gLockForcedButtons = 0x006a35c0;
-
-	if (*gLockForcedButtons > 0) {
-		*gLockForcedButtons = *gLockForcedButtons - 1;
-	}
-
-	if (*gForcedButtons) {
-		controlData |= *gForcedButtons;
-		*gForcedButtons = 0;
-	}
-
-	uint16_t *pControlData = 0x006a0b6c;
-
-	if (*gShellMode == 0) {
-		int32_t *netPlayer = 0x006a0978;
-
-		pControlData[*netPlayer] = controlData;
-	} else {
-		int32_t *gActivePlayer = 0x005674e8;
-
-		pControlData[*gActivePlayer] = controlData;
-	}
+	buttonsDown = curControlData & (curControlData ^ oldControlData);
 }
 
 uint32_t click_vblank = 0;
 
-void processMouse() {
-	uint32_t *vblanks = 0x0056af7c;
-	uint8_t *shouldCursorBeShown = 0x0069e050;
-	if (*shouldCursorBeShown && !isCursorActive) {
+uint8_t curMouse = 0;
+uint8_t oldMouse = 0;
+uint8_t mouseDown = 0;
+uint8_t mouseHasMoved = 0;
+
+int processMouse() {
+	uint32_t baseAddr = *((uint32_t *)0x539db4);
+
+	mouseHasMoved = 0;
+
+	//uint32_t *vblanks = 0x0056af7c;
+	if (currentModule != 1) {
 		setCursorActive();
-	} else if (!(*shouldCursorBeShown) && isCursorActive) {
+	} else if (currentModule == 1) {
 		setCursorInactive();
 	}
 
+	uint8_t oldMouse = curMouse;
+
 	uint32_t mouseX, mouseY, resX, resY;
-	uint32_t mouseButtons = SDL_GetMouseState(&mouseX, &mouseY);
-	mouseButtons &= 0x01;
+	curMouse = SDL_GetMouseState(&mouseX, &mouseY);
 
-	toGameScreenCoord(mouseX, mouseY, &mouseX, &mouseY);
+	mouseDown = curMouse & (curMouse ^ oldMouse);
 
-	mouseX *= 512;
-	mouseY *= 240;
+	if (currentModule != 1) {
+		toGameScreenCoord(mouseX, mouseY, &mouseX, &mouseY);
+
+		mouseX *= 640;
+		mouseY *= 480;
 	
-	getGameResolution(&resX, &resY);
-	mouseX /= resX;
-	mouseY /= resY;
+		getGameResolution(&resX, &resY);
+		mouseX /= resX;
+		mouseY /= resY;
 
-	uint32_t *gameMouseX = 0x0069e040;
-	uint32_t *gameMouseY = 0x0069e044;
-	uint32_t *gameMouseButtons = 0x0069e048;
-
-	uint8_t *mouseClicked = 0x0069e04c;
-	uint8_t *mouseChanged = 0x0069e04d;
-	uint8_t *mouseUnk1 = 0x0069e04f;
-	uint32_t *mouseUnk2 = 0x0069e054;
-
-	if (*vblanks != click_vblank) {
-		*mouseClicked = 0;
-	}
 	
-	if (*gameMouseX == mouseX && *gameMouseY == mouseY && *gameMouseButtons == mouseButtons) {
-		*mouseChanged = 0;
-	} else {
-		*mouseChanged = 1;
-		*mouseUnk1 = 0;
-		*mouseUnk2 = 0;
-		if (*gameMouseButtons != mouseButtons && mouseButtons == 0) {
-			click_vblank = *vblanks;
-			*mouseClicked = 1;
+		uint32_t *gameMouseX[] = { baseAddr + 0x0018d01c, baseAddr + 0x0, baseAddr + 0x001e6b40 };
+		uint32_t *gameMouseY[] = { baseAddr + 0x0018d020, baseAddr + 0x0, baseAddr + 0x001e6b44 };
+		uint32_t *alsoGameMouseX[] = { baseAddr + 0x0018c688, baseAddr + 0x0, baseAddr + 0x001e6990 };
+		uint32_t *alsoGameMouseY[] = { baseAddr + 0x0018c68c, baseAddr + 0x0, baseAddr + 0x001e6994 };
+
+		if (*(gameMouseX[currentModule]) != mouseX || *(gameMouseY[currentModule]) != mouseY) {
+			mouseHasMoved = 1;
 		}
-	}
 
-	*gameMouseX = mouseX;
-	*gameMouseY = mouseY;
-	*gameMouseButtons = mouseButtons;
+		*(gameMouseX[currentModule]) = mouseX;
+		*(gameMouseY[currentModule]) = mouseY;
+		*(alsoGameMouseX[currentModule]) = mouseX;
+		*(alsoGameMouseY[currentModule]) = mouseY;
+	}
+}
+
+int hasMouseMoved() {
+	return mouseHasMoved;
 }
 
 void processInputEvent(SDL_Event *e) {
@@ -597,7 +583,7 @@ void configureControls() {
 	padbinds.movement = getConfigInt(GAMEPAD_SECTION, "MovementStick", CONTROLLER_STICK_LEFT);
 }
 
-void InitDirectInput(void *hwnd, void *hinstance) {
+void initInput() {
 	log_printf(LL_INFO, "Initializing Input!\n");
 
 	// init sdl here
@@ -664,6 +650,159 @@ int __cdecl getSomethingIdk(int a) {
 	return 0;
 }
 
+int __cdecl GetButtonState(int mask, int just, int unk) {
+	//printf("GET BUTTON STATE: 0x%08x, %d %d\n", mask, just, unk);
+
+	uint16_t controlsMask = 0x0000;
+
+	if (mask & 0x00000001) {
+		controlsMask |= 0x01 << 6;	// keyboard enter - translate to x
+	}
+
+	if (mask & 0x00000002) {
+		controlsMask |= 0x01 << 4;	// keyboard esc - translate to triangle
+	}
+
+	if (mask & 0x00000004) {
+		controlsMask |= 0x01 << 11;	// keyboard esc - translate to start
+	}
+
+	if (mask & 0x00000400) {
+		if (mouseDown & SDL_BUTTON_LMASK) {
+			return 1;
+		}
+	}
+
+	if (mask & 0x00000800) {
+		if (mouseDown & SDL_BUTTON_RMASK) {
+			return 1;
+		}
+	}
+
+	if (mask & 0x00001000) {
+		controlsMask |= 0x01 << 12;	// joystick up
+	}
+
+	if (mask & 0x00002000) {
+		controlsMask |= 0x01 << 14;	// joystick down
+	}
+
+	if (mask & 0x00004000) {
+		controlsMask |= 0x01 << 15;	// joystick left
+	}
+
+	if (mask & 0x00008000) {
+		controlsMask |= 0x01 << 13;	// joystick right
+	}
+
+	if (mask & 0x00010000) {
+		controlsMask |= 0x01 << 6;	// controller x
+	}
+
+	if (mask & 0x00020000) {
+		controlsMask |= 0x01 << 4;	// controller triangle
+	}
+
+	if (mask & 0x00100000) {
+		controlsMask |= 0x01 << 7;	// controller circle
+	}
+
+	if (mask & 0x00200000) {
+		controlsMask |= 0x01 << 5;	// controller square
+	}
+
+	if (mask & 0x00400000) {
+		controlsMask |= 0x01 << 6;	// controller x
+	}
+
+	if (mask & 0x00800000) {
+		controlsMask |= 0x01 << 4;	// controller triangle
+	}
+
+	if (mask & 0x01000000) {
+		controlsMask |= 0x01 << 2;	// controller l1
+	}
+
+	if (mask & 0x02000000) {
+		controlsMask |= 0x01 << 0;	// controller l2
+	}
+
+	if (mask & 0x04000000) {
+		controlsMask |= 0x01 << 3;	// controller r1
+	}
+
+	if (mask & 0x08000000) {
+		controlsMask |= 0x01 << 1;	// controller r2
+	}
+
+	if (mask & 0x10000000) {
+		controlsMask |= 0x01 << 8;	// controller select
+	}
+
+	if (mask & 0x20000000) {
+		controlsMask |= 0x01 << 2;	// controller l1 (maybe keyboard shift?)
+	}
+
+	if (just) {
+		return (controlsMask & buttonsDown) != 0;
+	} else {
+		return (controlsMask & curControlData) != 0;
+	}
+}
+
+void __cdecl GetGameButtonState(uint32_t *current, uint32_t *fresh) {
+	ReadDirectInput();
+
+	*current = 0;
+	*fresh = 0;
+
+	// directions
+	*current |= ((curControlData & 0x01 << 12) != 0) << 0;
+	*fresh |= ((buttonsDown & 0x01 << 12) != 0) << 0;
+
+	*current |= ((curControlData & 0x01 << 14) != 0) << 1;
+	*fresh |= ((buttonsDown & 0x01 << 14) != 0) << 1;
+
+	*current |= ((curControlData & 0x01 << 15) != 0) << 2;
+	*fresh |= ((buttonsDown & 0x01 << 15) != 0) << 2;
+
+	*current |= ((curControlData & 0x01 << 13) != 0) << 3;
+	*fresh |= ((buttonsDown & 0x01 << 13) != 0) << 3;
+
+	// face buttons
+	*current |= ((curControlData & 0x01 << 4) != 0) << 4;
+	*fresh |= ((buttonsDown & 0x01 << 4) != 0) << 4;
+
+	*current |= ((curControlData & 0x01 << 7) != 0) << 5;
+	*fresh |= ((buttonsDown & 0x01 << 7) != 0) << 5;
+
+	*current |= ((curControlData & 0x01 << 5) != 0) << 6;
+	*fresh |= ((buttonsDown & 0x01 << 5) != 0) << 6;
+
+	*current |= ((curControlData & 0x01 << 6) != 0) << 7;
+	*fresh |= ((buttonsDown & 0x01 << 6) != 0) << 7;
+
+	// shoulders
+	*current |= ((curControlData & 0x01 << 2) != 0) << 8;
+	*fresh |= ((buttonsDown & 0x01 << 2) != 0) << 8;
+
+	*current |= ((curControlData & 0x01 << 0) != 0) << 9;
+	*fresh |= ((buttonsDown & 0x01 << 0) != 0) << 9;
+
+	*current |= ((curControlData & 0x01 << 3) != 0) << 10;
+	*fresh |= ((buttonsDown & 0x01 << 3) != 0) << 10;
+
+	*current |= ((curControlData & 0x01 << 1) != 0) << 11;
+	*fresh |= ((buttonsDown & 0x01 << 1) != 0) << 11;
+
+	// start/select
+	*current |= ((curControlData & 0x01 << 11) != 0) << 12;
+	*fresh |= ((buttonsDown & 0x01 << 11) != 0) << 12;
+
+	*current |= ((curControlData & 0x01 << 8) != 0) << 13;
+	*fresh |= ((buttonsDown & 0x01 << 8) != 0) << 13;
+}
+
 int getSkipInput() {
 	if (anyButtonPressed == 1) {
 		anyButtonPressed |= 2;
@@ -676,17 +815,105 @@ int getSkipInput() {
 	}
 }
 
-void installInputPatches() {
-	patchJmp(0x004e1860, InitDirectInput);
-	patchJmp(0x004e1c60, ReadDirectInput);
-	patchJmp(0x004e1e10, PCINPUT_ActuatorOn);
-	patchJmp(0x004e1c30, PCINPUT_ShutDown);
-	patchJmp(0x004e1ee0, PCINPUT_Load);
-	patchJmp(0x004e2630, PCINPUT_Save);
-	patchJmp(0x004e1430, getSkipInput);
-	patchJmp(0x004e1390, getSomethingIdk);
+int fakepollcontroller() {
+	return 1;
+}
 
-	// remove windows event handling in movie player
-	patchByte(0x004e3104, 0xeb);
-	patchNop(0x004e30f3, 15);
+// cheat input patches
+int getkeybind(int bind) {
+	return bind;
+}
+
+int getkeybindstate(int bind, int just) {
+	uint32_t current = 0;
+	uint32_t fresh = 0;
+
+	//GetGameButtonState(&current, &fresh);
+	// directions
+	current |= ((curControlData & 0x01 << 12) != 0) << 0;
+	fresh |= ((buttonsDown & 0x01 << 12) != 0) << 0;
+
+	current |= ((curControlData & 0x01 << 14) != 0) << 1;
+	fresh |= ((buttonsDown & 0x01 << 14) != 0) << 1;
+
+	current |= ((curControlData & 0x01 << 15) != 0) << 2;
+	fresh |= ((buttonsDown & 0x01 << 15) != 0) << 2;
+
+	current |= ((curControlData & 0x01 << 13) != 0) << 3;
+	fresh |= ((buttonsDown & 0x01 << 13) != 0) << 3;
+
+	// face buttons
+	current |= ((curControlData & 0x01 << 4) != 0) << 4;
+	fresh |= ((buttonsDown & 0x01 << 4) != 0) << 4;
+
+	current |= ((curControlData & 0x01 << 7) != 0) << 5;
+	fresh |= ((buttonsDown & 0x01 << 7) != 0) << 5;
+
+	current |= ((curControlData & 0x01 << 5) != 0) << 6;
+	fresh |= ((buttonsDown & 0x01 << 5) != 0) << 6;
+
+	current |= ((curControlData & 0x01 << 6) != 0) << 7;
+	fresh |= ((buttonsDown & 0x01 << 6) != 0) << 7;
+
+	// shoulders
+	current |= ((curControlData & 0x01 << 2) != 0) << 8;
+	fresh |= ((buttonsDown & 0x01 << 2) != 0) << 8;
+
+	current |= ((curControlData & 0x01 << 0) != 0) << 9;
+	fresh |= ((buttonsDown & 0x01 << 0) != 0) << 9;
+
+	current |= ((curControlData & 0x01 << 3) != 0) << 10;
+	fresh |= ((buttonsDown & 0x01 << 3) != 0) << 10;
+
+	current |= ((curControlData & 0x01 << 1) != 0) << 11;
+	fresh |= ((buttonsDown & 0x01 << 1) != 0) << 11;
+
+	// start/select
+	current |= ((curControlData & 0x01 << 11) != 0) << 12;
+	fresh |= ((buttonsDown & 0x01 << 11) != 0) << 12;
+
+	current |= ((curControlData & 0x01 << 8) != 0) << 13;
+	fresh |= ((buttonsDown & 0x01 << 8) != 0) << 13;
+
+	if (just) {
+		return (bind & fresh) != 0;
+	} else {
+		return (bind & current) != 0;
+	}
+}
+
+void installModuleInputPatches(int module, uint32_t baseAddr) {
+	switch(module) {
+	case 0:	
+		patchJmp(baseAddr + 0x0001a0b0, PCINPUT_Load);	// init directinput
+		patchJmp(baseAddr + 0x000205f0, PCINPUT_Load);	// create devices
+		patchJmp(baseAddr + 0x00020140, GetButtonState);	// get button
+		patchJmp(baseAddr + 0x00020690, ReadDirectInput);	// poll keyboard
+		patchJmp(baseAddr + 0x0001b050, fakepollcontroller);	// poll controller (skip)
+		patchJmp(baseAddr + 0x00023030, hasMouseMoved);
+		patchNop(baseAddr + 0x00023011, 5);	// don't draw cursor
+
+		break;
+	case 1:
+		patchJmp(baseAddr + 0x00070ac0, PCINPUT_Load);	// init directinput
+		patchJmp(baseAddr + 0x00076750, PCINPUT_Load);	// create devices
+		patchJmp(baseAddr + 0x00075f60, GetButtonState);	// get button
+		patchJmp(baseAddr + 0x000767f0, ReadDirectInput);	// poll keyboard
+		patchJmp(baseAddr + 0x000723a0, fakepollcontroller);	// poll controller (skip)
+		patchJmp(baseAddr + 0x000763c0, GetGameButtonState);
+		patchJmp(baseAddr + 0x000764f0, getkeybind);
+		patchJmp(baseAddr + 0x00076800, getkeybindstate);
+		break;
+	case 2:
+		patchJmp(baseAddr + 0x00032b80, PCINPUT_Load);	// init directinput
+		patchJmp(baseAddr + 0x000359a0, PCINPUT_Load);	// create devices
+		patchJmp(baseAddr + 0x000354f0, GetButtonState);	// get button
+		patchJmp(baseAddr + 0x00035a40, ReadDirectInput);	// poll keyboard
+		patchJmp(baseAddr + 0x00033a40, fakepollcontroller);	// poll controller (skip)
+		patchJmp(baseAddr + 0x00036b80, hasMouseMoved);
+		//patchByte(baseAddr + 0x00036b43, 0xc3);	// don't draw cursor
+		patchByte(baseAddr + 0x00036b17, 0xeb);	// don't draw cursor
+		//patchJmp(baseAddr + 0x000763c0, GetGameButtonState);
+		break;
+	}
 }

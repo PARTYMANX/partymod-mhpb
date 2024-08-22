@@ -67,7 +67,7 @@ void initPatch() {
 		freopen_s(&fDummy, "CONOUT$", "w", stderr);
 		freopen_s(&fDummy, "CONOUT$", "w", stdout);
 	}
-	log_printf(LL_INFO, "PARTYMOD for THPS2 %d.%d.%d\n", VERSION_NUMBER_MAJOR, VERSION_NUMBER_MINOR, VERSION_NUMBER_PATCH);
+	log_printf(LL_INFO, "PARTYMOD for MHPB %d.%d.%d\n", VERSION_NUMBER_MAJOR, VERSION_NUMBER_MINOR, VERSION_NUMBER_PATCH);
 
 	log_printf(LL_INFO, "DIRECTORY: %s\n", executableDirectory);
 
@@ -76,6 +76,7 @@ void initPatch() {
 #endif
 
 	initEvents();
+	initInput();
 
 	log_printf(LL_INFO, "Patch Initialized\n");
 }
@@ -87,19 +88,24 @@ void fatalError(const char *msg) {
 }
 
 void quitGame() {
-	void (*gameShutdown)() = 0x004e46c0;
-	void (*WINMAIN_ShutDown)() = 0x004f5750;
-	void (*operator_delete)(void *) = 0x004fd323;
-	void **PCMemBuffer = 0x0055ec78;
-
-	gameShutdown();
-	WINMAIN_ShutDown();
-	if (*PCMemBuffer) {
-		operator_delete(PCMemBuffer);
-		*PCMemBuffer = NULL;
-	}
+	
 
 	exit(0);
+}
+
+void loadAudioConfig() {
+	//uint32_t baseAddr = *((uint32_t *)0x539db4);
+
+	uint16_t *sound_vol = 0x0053c12e;
+	uint16_t *music_vol = 0x0053c130;
+
+	sound_vol = 7;
+	music_vol = 6;
+}
+
+void loadConfig() {
+	loadAudioConfig();
+	loadGfxSettings();
 }
 
 int WinYield() {
@@ -119,6 +125,22 @@ void patchWindowAndInit() {
 	patchCall(0x00404f74, initPatch);
 	
 	patchJmp(0x00405f90, WinYield);
+
+	patchJmp(0x004049e0, loadConfig);
+}
+
+void patchModuleEventHandler(int module, uint32_t baseAddr) {
+	switch(module) {
+	case 0:
+		patchJmp(baseAddr + 0x00024240, WinYield);
+		break;
+	case 1:
+		patchJmp(baseAddr + 0x0007bf70, WinYield);
+		break;
+	case 2:
+		patchJmp(baseAddr + 0x00038a70, WinYield);
+		break;
+	}
 }
 
 extern int currentModule = -1;
@@ -139,6 +161,10 @@ int _cdecl loadModuleWrapper(char *name) {
 		log_printf(LL_INFO, "loading source module\n");
 		currentModule = 1;
 		break;
+	case 0x68366842:
+		log_printf(LL_INFO, "loading editor module\n");
+		currentModule = 2;
+		break;
 	default:
 		log_printf(LL_INFO, "hash for %s is 0x%08x!!!\n", name, hash);
 	}
@@ -148,6 +174,8 @@ int _cdecl loadModuleWrapper(char *name) {
 	if (currentModule != -1) {
 		log_printf(LL_INFO, "INSTALLING MODULE PATCHES\n");
 		installModuleGfxPatches(currentModule, baseAddr);
+		patchModuleEventHandler(currentModule, baseAddr);
+		installModuleInputPatches(currentModule, baseAddr);
 	}
 
 	return result;

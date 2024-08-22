@@ -107,7 +107,7 @@ HWND initWindow() {
 
 	registerEventHandler(handleWindowEvents);
 
-	printf("HWND = 0x%08x\n", windowHandle);
+	//printf("HWND = 0x%08x\n", windowHandle);
 
 	return windowHandle;
 }

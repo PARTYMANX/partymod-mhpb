@@ -15,6 +15,7 @@
 #include <gfx/vk/gfx_vk.h>
 #include <gfx/gfx_global.h>
 
+int resolution_setting = 0;
 int internal_resolution_x = 640;
 int internal_resolution_y = 480;
 int resolution_x = 640;
@@ -22,6 +23,8 @@ int resolution_y = 480;
 float aspectRatio = 4.0f / 3.0f;
 uint8_t textureFilter = 0;
 uint8_t useHiResTextures = 1;
+int sfx_vol = 10;
+int music_vol = 10;
 
 int isMinimized = 0;
 
@@ -102,27 +105,16 @@ void D3DPOLY_Init() {
 
 	uint32_t baseAddr = *((uint32_t *)0x539db4);
 
-	void (__cdecl *Init_PolyBuf[])() = { baseAddr + 0x000149b0, baseAddr + 0x0006b440, baseAddr + 0x000149b0 };
-	void (__cdecl *init_pushbacks[])() = { NULL, baseAddr + 0x000676b0, NULL};
-	void (__cdecl *unkfunc[])(float) = { NULL, baseAddr + 0x00068700, NULL};
+	void (__cdecl *Init_PolyBuf[])() = { baseAddr + 0x000149b0, baseAddr + 0x0006b440, baseAddr + 0x0002e070 };
+	void (__cdecl *init_pushbacks[])() = { NULL, baseAddr + 0x000676b0, baseAddr + 0x0002a740};
 
 	if (init_pushbacks[currentModule] != NULL) {
-		//log_printf(LL_INFO, "SETTING UP PUSHBACKS\n");
+		log_printf(LL_INFO, "SETTING UP PUSHBACKS\n");
 		init_pushbacks[currentModule]();
 
-		uint16_t *pushbacks = baseAddr + 0x000d8a04;
-		for (int i = 0; i < 51000; i++) {
-			if (pushbacks[i] != 0) {
-				//printf("PUSHBACK %d: %d\n", i, pushbacks[i]);
-			}
-		}
+		//uint16_t *pushbacks = baseAddr + 0x000d8a04;
 	}
 	Init_PolyBuf[currentModule]();
-
-	/*if (unkfunc[currentModule] != NULL) {
-		log_printf(LL_INFO, "NO IDEA WHAT THIS DOES\n");
-		unkfunc[currentModule](1.5f);
-	}*/
 }
 
 uint32_t fixDXColor(uint32_t color) {
@@ -132,15 +124,15 @@ uint32_t fixDXColor(uint32_t color) {
 void D3DPOLY_StartScene(int a, int b) {
 	uint32_t baseAddr = *((uint32_t *)0x539db4);
 
-	void (__cdecl *setupFog[])(int) = { baseAddr + 0x00011910, baseAddr + 0x00068560, baseAddr + 0x00011910 };
-	uint32_t *viewportClass[] = { baseAddr + 0x0018e548, baseAddr + 0x000bf308, baseAddr + 0x0018e548 };
-	uint16_t *DpqMin[] = { baseAddr + 0x0018e554, baseAddr + 0x000bf318, baseAddr + 0x0018e554 };
+	void (__cdecl *setupFog[])(int) = { baseAddr + 0x00011910, baseAddr + 0x00068560, baseAddr + 0x0002afc0 };
+	uint32_t *viewportClass[] = { baseAddr + 0x0018e548, baseAddr + 0x000bf308, baseAddr + 0x0007ace8 };
+	uint16_t *DpqMin[] = { baseAddr + 0x0018e554, baseAddr + 0x000bf318, baseAddr + 0x0007acf8 };
 	uint16_t *DpqMaxMaybe = *(viewportClass[currentModule]) + 10;
-	float *fogThreshold[] = { baseAddr + 0x00071d84, baseAddr + 0x000ae034, baseAddr + 0x00071d84 };
-	float *FogYonScale[] = { baseAddr + 0x00071d80, baseAddr + 0x000ae030, baseAddr + 0x00071d80 };
-	float *VideoFogYonScale[] = { baseAddr + 0x0007d9d0, baseAddr + 0x000b4f68, baseAddr + 0x0007d9d0 };
-	uint32_t *gShellMode[] = { baseAddr + 0x0018e670, baseAddr + 0x002203a8, baseAddr + 0x0018e670};
-	uint8_t *startscene[] = { baseAddr + 0x00188e04, baseAddr + 0x0021b89c, baseAddr + 0x00188e04 };
+	float *fogThreshold[] = { baseAddr + 0x00071d84, baseAddr + 0x000ae034, baseAddr + 0x0006b4a4 };
+	float *FogYonScale[] = { baseAddr + 0x00071d80, baseAddr + 0x000ae030, baseAddr + 0x0006b4a0 };
+	float *VideoFogYonScale[] = { baseAddr + 0x0007d9d0, baseAddr + 0x000b4f68, baseAddr + 0x00070878 };
+	uint32_t *gShellMode[] = { baseAddr + 0x0018e670, baseAddr + 0x002203a8, baseAddr + 0x001e82ac};
+	uint8_t *startscene[] = { baseAddr + 0x00188e04, baseAddr + 0x0021b89c, baseAddr + 0x001e3f5c };
 
 	//printf("STUB: D3DPOLY_StartScene: 0x%08x 0x%08x\n", a, b);
 
@@ -168,6 +160,14 @@ void D3DPOLY_StartScene(int a, int b) {
 
 	uint32_t clearColor = fixDXColor(b);
 
+	// hack to disable clearing when loading the park editor.  not sure what's up there but they set the clear color to white when it's supposed to be 0??
+	// there's something i don't get but I don't need to get it because i can cheat
+	if (clearColor == 0xFFFFFFFF && currentModule == 2) {
+		clearColor = 0;
+	} else {
+		clearColor |= 0xFF000000;
+	}
+
 	if (!isMinimized) {
 		startRender(renderer, clearColor);
 	}
@@ -177,7 +177,7 @@ void D3DPOLY_StartScene(int a, int b) {
 
 void D3D_EndSceneAndFlip() {
 	uint32_t baseAddr = *((uint32_t *)0x539db4);
-	void (*D3DPOLY_EndScene[])() = { baseAddr + 0x00011a90, baseAddr + 0x000686e0, baseAddr + 0x00011a90 };
+	void (*D3DPOLY_EndScene[])() = { baseAddr + 0x00011a90, baseAddr + 0x000686e0, baseAddr + 0x0002b140 };
 
 	D3DPOLY_EndScene[currentModule]();
 	//printf("STUB: D3D_EndSceneAndFlip\n");
@@ -205,15 +205,16 @@ struct dxpoly {
 
 inline uint32_t applyFog(uint32_t color_in, float depth) {
 	uint32_t baseAddr = *((uint32_t *)0x539db4);
-	uint32_t *viewportClass[] = { baseAddr + 0x0018e548, baseAddr + 0x000bf308, baseAddr + 0x0018e548 };
-	float *fogThreshold[] = { baseAddr + 0x00071d84, baseAddr + 0x000ae034, baseAddr + 0x00071d84 };
-	float *FogYonScale[] = { baseAddr + 0x00071d80, baseAddr + 0x000ae030, baseAddr + 0x00071d80 };
+
+	uint32_t *viewportClass[] = { baseAddr + 0x0018e548, baseAddr + 0x000bf308, baseAddr + 0x0007ace8 };
+	float *fogThreshold[] = { baseAddr + 0x00071d84, baseAddr + 0x000ae034, baseAddr + 0x0006b4a4 };
+	float *FogYonScale[] = { baseAddr + 0x00071d80, baseAddr + 0x000ae030, baseAddr + 0x0006b4a0 };
 	uint16_t *someotherfogvalue = *(viewportClass[currentModule]) + 14;
 	uint16_t *DpqMaxMaybe = *(viewportClass[currentModule]) + 10;
-	uint32_t *aFog[] = { baseAddr + 0x00085c80, baseAddr + 0x00118718, baseAddr + 0x00071d80 };
-	uint32_t *rFog[] = { baseAddr + 0x0010616c, baseAddr + 0x00198c04, baseAddr + 0x00071d80 };
-	uint32_t *gFog[] = { baseAddr + 0x001485a4, baseAddr + 0x001db03c, baseAddr + 0x00071d80 };
-	uint32_t *bFog[] = { baseAddr + 0x000c6080, baseAddr + 0x00158b18, baseAddr + 0x00071d80 };
+	uint32_t *aFog[] = { baseAddr + 0x00085c80, baseAddr + 0x00118718, baseAddr + 0x000e0dd8 };
+	uint32_t *rFog[] = { baseAddr + 0x0010616c, baseAddr + 0x00198c04, baseAddr + 0x001612c4 };
+	uint32_t *gFog[] = { baseAddr + 0x001485a4, baseAddr + 0x001db03c, baseAddr + 0x001a36fc };
+	uint32_t *bFog[] = { baseAddr + 0x000c6080, baseAddr + 0x00158b18, baseAddr + 0x001211d8 };
 
 	/*uint32_t *viewportClass = 0x00560698;
 	float *fogThreshold = 0x00546b3c;
@@ -250,8 +251,8 @@ inline uint32_t applyFog(uint32_t color_in, float depth) {
 
 void transformDXCoords(renderVertex *vertices, int count) {
 	uint32_t baseAddr = *((uint32_t *)0x539db4);
-	int *screen_width[] = { baseAddr + 0x0018984c, baseAddr + 0x0021bd14, baseAddr + 0x0018984c };
-	int *screen_height[] = { baseAddr + 0x00189850, baseAddr + 0x0021bd18, baseAddr + 0x00189850 };
+	int *screen_width[] = { baseAddr + 0x0018984c, baseAddr + 0x0021bd14, baseAddr + 0x001e43d4 };
+	int *screen_height[] = { baseAddr + 0x00189850, baseAddr + 0x0021bd18, baseAddr + 0x001e43d8 };
 
 	float xmult = (1.0f / (float)*(screen_width[currentModule])) * 2.0f;
 	float ymult = (1.0f / (float)*(screen_height[currentModule])) * 2.0f;
@@ -601,8 +602,8 @@ int bbb = 480;
 
 void transformCoords(renderVertex *vertices, int count) {
 	uint32_t baseAddr = *((uint32_t *)0x539db4);
-	int *screen_width[] = { baseAddr + 0x0018984c, baseAddr + 0x0021bd14, baseAddr + 0x0018984c };
-	int *screen_height[] = { baseAddr + 0x00189850, baseAddr + 0x0021bd18, baseAddr + 0x00189850 };
+	int *screen_width[] = { baseAddr + 0x0018984c, baseAddr + 0x0021bd14, baseAddr + 0x001e43d4 };
+	int *screen_height[] = { baseAddr + 0x00189850, baseAddr + 0x0021bd18, baseAddr + 0x001e43d8 };
 
 	float xmult = (1.0f / ((float)*(screen_width[currentModule]))) * 2.0f;
 	float ymult = (1.0f / ((float)*(screen_height[currentModule]))) * 2.0f;
@@ -633,8 +634,8 @@ void transformCoords(renderVertex *vertices, int count) {
 
 void transformCoordsLine(renderVertex *vertices, int count) {
 	uint32_t baseAddr = *((uint32_t *)0x539db4);
-	int *screen_width[] = { baseAddr + 0x0018984c, baseAddr + 0x0021bd14, baseAddr + 0x0018984c };
-	int *screen_height[] = { baseAddr + 0x00189850, baseAddr + 0x0021bd18, baseAddr + 0x00189850 };
+	int *screen_width[] = { baseAddr + 0x0018984c, baseAddr + 0x0021bd14, baseAddr + 0x001e43d4 };
+	int *screen_height[] = { baseAddr + 0x00189850, baseAddr + 0x0021bd18, baseAddr + 0x001e43d8 };
 
 	float xmult = (1.0f / ((float)*(screen_width[currentModule]))) * 2.0f;
 	float ymult = (1.0f / ((float)*(screen_height[currentModule]))) * 2.0f;
@@ -717,7 +718,7 @@ void fixUVs(renderVertex *vertices, int count, struct texture *tex) {
 
 void renderLineF2(int *tag) {
 	uint32_t baseAddr = *((uint32_t *)0x539db4);
-	uint32_t *alphaBlend[] = { baseAddr + 0x001885a4, baseAddr + 0x0021b03c, baseAddr + 0x001885a4 };
+	uint32_t *alphaBlend[] = { baseAddr + 0x001885a4, baseAddr + 0x0021b03c, baseAddr + 0x001e36fc };
 
 	uint8_t r = *((uint8_t *)tag + 4);
 	uint8_t g = *((uint8_t *)tag + 5);
@@ -745,7 +746,7 @@ void renderLineF2(int *tag) {
 
 void renderLineF3(int *tag) {
 	uint32_t baseAddr = *((uint32_t *)0x539db4);
-	uint32_t *alphaBlend[] = { baseAddr + 0x001885a4, baseAddr + 0x0021b03c, baseAddr + 0x001885a4 };
+	uint32_t *alphaBlend[] = { baseAddr + 0x001885a4, baseAddr + 0x0021b03c, baseAddr + 0x001e36fc };
 
 	uint8_t r = *((uint8_t *)tag + 4);
 	uint8_t g = *((uint8_t *)tag + 5);
@@ -777,7 +778,7 @@ void renderLineF3(int *tag) {
 
 void renderLineF4(int *tag) {
 	uint32_t baseAddr = *((uint32_t *)0x539db4);
-	uint32_t *alphaBlend[] = { baseAddr + 0x001885a4, baseAddr + 0x0021b03c, baseAddr + 0x001885a4 };
+	uint32_t *alphaBlend[] = { baseAddr + 0x001885a4, baseAddr + 0x0021b03c, baseAddr + 0x001e36fc };
 
 	uint8_t r = *((uint8_t *)tag + 4);
 	uint8_t g = *((uint8_t *)tag + 5);
@@ -813,7 +814,7 @@ void renderLineF4(int *tag) {
 
 void renderLineG2(int *tag) {
 	uint32_t baseAddr = *((uint32_t *)0x539db4);
-	uint32_t *alphaBlend[] = { baseAddr + 0x001885a4, baseAddr + 0x0021b03c, baseAddr + 0x001885a4 };
+	uint32_t *alphaBlend[] = { baseAddr + 0x001885a4, baseAddr + 0x0021b03c, baseAddr + 0x001e36fc };
 
 	uint8_t alpha = *(alphaBlend[currentModule]) >> 24;
 	
@@ -839,7 +840,7 @@ void renderLineG2(int *tag) {
 
 void renderPolyF3(int *tag) {
 	uint32_t baseAddr = *((uint32_t *)0x539db4);
-	uint32_t *alphaBlend[] = { baseAddr + 0x001885a4, baseAddr + 0x0021b03c, baseAddr + 0x001885a4 };
+	uint32_t *alphaBlend[] = { baseAddr + 0x001885a4, baseAddr + 0x0021b03c, baseAddr + 0x001e36fc };
 
 	uint8_t r = *((uint8_t *)tag + 4);
 	uint8_t g = *((uint8_t *)tag + 5);
@@ -874,7 +875,7 @@ void renderPolyF3(int *tag) {
 
 void renderPolyF4(int *tag) {
 	uint32_t baseAddr = *((uint32_t *)0x539db4);
-	uint32_t *alphaBlend[] = { baseAddr + 0x001885a4, baseAddr + 0x0021b03c, baseAddr + 0x001885a4 };
+	uint32_t *alphaBlend[] = { baseAddr + 0x001885a4, baseAddr + 0x0021b03c, baseAddr + 0x001e36fc };
 
 	uint8_t r = *((uint8_t *)tag + 4);
 	uint8_t g = *((uint8_t *)tag + 5);
@@ -914,7 +915,7 @@ void renderPolyF4(int *tag) {
 
 void renderPolyFT3(int *tag) {
 	uint32_t baseAddr = *((uint32_t *)0x539db4);
-	uint32_t *alphaBlend[] = { baseAddr + 0x001885a4, baseAddr + 0x0021b03c, baseAddr + 0x001885a4 };
+	uint32_t *alphaBlend[] = { baseAddr + 0x001885a4, baseAddr + 0x0021b03c, baseAddr + 0x001e36fc };
 	if (*(int *)((uint8_t *)tag + 36)) {
 		struct texture *tex = *(uint32_t **)(*(int *)((uint8_t *)tag + 36) + 0x14);
 
@@ -961,7 +962,7 @@ void renderPolyFT3(int *tag) {
 
 void renderPolyFT4(int *tag) {
 	uint32_t baseAddr = *((uint32_t *)0x539db4);
-	uint32_t *alphaBlend[] = { baseAddr + 0x001885a4, baseAddr + 0x0021b03c, baseAddr + 0x001885a4 };
+	uint32_t *alphaBlend[] = { baseAddr + 0x001885a4, baseAddr + 0x0021b03c, baseAddr + 0x001e36fc };
 	//log_printf(LL_INFO, "FT4\n");
 	if (*(int *)((uint8_t *)tag + 44)) {
 		struct texture *tex = *(uint32_t **)(*(int *)((uint8_t *)tag + 44) + 0x14);
@@ -1021,7 +1022,7 @@ void renderPolyFT4(int *tag) {
 
 void renderPolyG3(int *tag) {
 	uint32_t baseAddr = *((uint32_t *)0x539db4);
-	uint32_t *alphaBlend[] = { baseAddr + 0x001885a4, baseAddr + 0x0021b03c, baseAddr + 0x001885a4 };
+	uint32_t *alphaBlend[] = { baseAddr + 0x001885a4, baseAddr + 0x0021b03c, baseAddr + 0x001e36fc };
 	uint8_t alpha = *(alphaBlend[currentModule]) >> 24;
 
 	uint32_t color1 = unormColor(*((uint8_t *)tag + 4), *((uint8_t *)tag + 5), *((uint8_t *)tag + 6), alpha);
@@ -1055,7 +1056,7 @@ void renderPolyG3(int *tag) {
 
 void renderPolyG4(int *tag) {
 	uint32_t baseAddr = *((uint32_t *)0x539db4);
-	uint32_t *alphaBlend[] = { baseAddr + 0x001885a4, baseAddr + 0x0021b03c, baseAddr + 0x001885a4 };
+	uint32_t *alphaBlend[] = { baseAddr + 0x001885a4, baseAddr + 0x0021b03c, baseAddr + 0x001e36fc };
 	uint8_t alpha = *(alphaBlend[currentModule]) >> 24;
 
 	uint32_t color1 = unormColor(*((uint8_t *)tag + 4), *((uint8_t *)tag + 5), *((uint8_t *)tag + 6), alpha);
@@ -1096,7 +1097,7 @@ void renderPolyG4(int *tag) {
 
 void renderPolyGT3(int *tag) {
 	uint32_t baseAddr = *((uint32_t *)0x539db4);
-	uint32_t *alphaBlend[] = { baseAddr + 0x001885a4, baseAddr + 0x0021b03c, baseAddr + 0x001885a4 };
+	uint32_t *alphaBlend[] = { baseAddr + 0x001885a4, baseAddr + 0x0021b03c, baseAddr + 0x001e36fc };
 
 	if (*(int *)((uint8_t *)tag + 44)) {
 		struct texture *tex = *(uint32_t **)(*(int *)((uint8_t *)tag + 44) + 0x14);
@@ -1145,7 +1146,7 @@ void renderPolyGT3(int *tag) {
 
 void renderPolyGT4(int *tag) {
 	uint32_t baseAddr = *((uint32_t *)0x539db4);
-	uint32_t *alphaBlend[] = { baseAddr + 0x001885a4, baseAddr + 0x0021b03c, baseAddr + 0x001885a4 };
+	uint32_t *alphaBlend[] = { baseAddr + 0x001885a4, baseAddr + 0x0021b03c, baseAddr + 0x001e36fc };
 
 	if (*(int *)((uint8_t *)tag + 56)) {
 		struct texture *tex = *(uint32_t **)(*(int *)((uint8_t *)tag + 56) + 0x14);
@@ -1203,7 +1204,7 @@ void renderPolyGT4(int *tag) {
 
 void renderTile(int *tag) {
 	uint32_t baseAddr = *((uint32_t *)0x539db4);
-	uint32_t *alphaBlend[] = { baseAddr + 0x001885a4, baseAddr + 0x0021b03c, baseAddr + 0x001885a4 };
+	uint32_t *alphaBlend[] = { baseAddr + 0x001885a4, baseAddr + 0x0021b03c, baseAddr + 0x001e36fc };
 
 	uint8_t r = *((uint8_t *)tag + 4);
 	uint8_t g = *((uint8_t *)tag + 5);
@@ -1266,8 +1267,8 @@ void renderTile16(int *tag) {
 
 void changeViewport(int *tag) {
 	uint32_t baseAddr = *((uint32_t *)0x539db4);
-	int *screen_width[] = { baseAddr + 0x0018984c, baseAddr + 0x0021bd14, baseAddr + 0x0018984c };
-	int *screen_height[] = { baseAddr + 0x00189850, baseAddr + 0x0021bd18, baseAddr + 0x00189850 };
+	int *screen_width[] = { baseAddr + 0x0018984c, baseAddr + 0x0021bd14, baseAddr + 0x001e43d4 };
+	int *screen_height[] = { baseAddr + 0x00189850, baseAddr + 0x0021bd18, baseAddr + 0x001e43d8 };
 
 	// all values are based on the original resolution of 512x240
 	float x = *(int16_t*)((uint8_t*)tag + 8);
@@ -1303,12 +1304,12 @@ void changeViewport(int *tag) {
 void D3DPOLY_DrawOTag(int *tag) {
 	uint32_t baseAddr = *((uint32_t *)0x539db4);
 	//uint32_t *polyFlags[] = { baseAddr + 0x001485a0, baseAddr + 0x001485a0, baseAddr + 0x001485a0 };
-	uint32_t *alphaBlend[] = { baseAddr + 0x001885a4, baseAddr + 0x0021b03c, baseAddr + 0x001885a4 };
-	uint32_t *nextPSXBlendMode[] = { baseAddr + 0x00188dfc, baseAddr + 0x0021b894, baseAddr + 0x00188dfc };
+	uint32_t *alphaBlend[] = { baseAddr + 0x001885a4, baseAddr + 0x0021b03c, baseAddr + 0x001e36fc };
+	uint32_t *nextPSXBlendMode[] = { baseAddr + 0x00188dfc, baseAddr + 0x0021b894, baseAddr + 0x001e3f54 };
 
 	//uint32_t baseAddr = *((uint32_t *)0x539db4);
-	int *screen_width[] = { baseAddr + 0x0018984c, baseAddr + 0x0021bd14, baseAddr + 0x0018984c };
-	int *screen_height[] = { baseAddr + 0x00189850, baseAddr + 0x0021bd18, baseAddr + 0x00189850 };
+	int *screen_width[] = { baseAddr + 0x0018984c, baseAddr + 0x0021bd14, baseAddr + 0x001e43d4 };
+	int *screen_height[] = { baseAddr + 0x00189850, baseAddr + 0x0021bd18, baseAddr + 0x001e43d8 };
 
 	//log_printf(LL_INFO, "SCREEN W: %d H: %d\n", *(screen_width[currentModule]), *(screen_height[currentModule]));
 
@@ -1458,14 +1459,14 @@ void D3DTEX_Init() {
 	//setup 16 bit format:
 	uint32_t baseAddr = *((uint32_t *)0x539db4);
 
-	uint32_t *r_bits[] = { baseAddr + 0x00189058, baseAddr + 0x0021baf0, baseAddr + 0x0069d148 };
-	uint32_t *g_bits[] = { baseAddr + 0x0018905c, baseAddr + 0x0021baf4, baseAddr + 0x0 };
-	uint32_t *b_bits[] = { baseAddr + 0x00189060, baseAddr + 0x0021baf8, baseAddr + 0x0 };
-	uint32_t *a_bits[] = { baseAddr + 0x00189064, baseAddr + 0x0021bafc, baseAddr + 0x0 };
-	uint32_t *r_offset[] = { baseAddr + 0x00189068, baseAddr + 0x0021bb00, baseAddr + 0x0 };
-	uint32_t *g_offset[] = { baseAddr + 0x0018906c, baseAddr + 0x0021bb04, baseAddr + 0x0 };
-	uint32_t *b_offset[] = { baseAddr + 0x00189070, baseAddr + 0x0021bb08, baseAddr + 0x0 };
-	uint32_t *a_offset[] = { baseAddr + 0x00189074, baseAddr + 0x0021bb0c, baseAddr + 0x0 };
+	uint32_t *r_bits[] = { baseAddr + 0x00189058, baseAddr + 0x0021baf0, baseAddr + 0x001e41b0 };
+	uint32_t *g_bits[] = { baseAddr + 0x0018905c, baseAddr + 0x0021baf4, baseAddr + 0x001e41b4 };
+	uint32_t *b_bits[] = { baseAddr + 0x00189060, baseAddr + 0x0021baf8, baseAddr + 0x001e41b8 };
+	uint32_t *a_bits[] = { baseAddr + 0x00189064, baseAddr + 0x0021bafc, baseAddr + 0x001e41bc };
+	uint32_t *r_offset[] = { baseAddr + 0x00189068, baseAddr + 0x0021bb00, baseAddr + 0x001e41c0 };
+	uint32_t *g_offset[] = { baseAddr + 0x0018906c, baseAddr + 0x0021bb04, baseAddr + 0x001e41c4 };
+	uint32_t *b_offset[] = { baseAddr + 0x00189070, baseAddr + 0x0021bb08, baseAddr + 0x001e41c8 };
+	uint32_t *a_offset[] = { baseAddr + 0x00189074, baseAddr + 0x0021bb0c, baseAddr + 0x001e41cc };
 
 	*(r_bits[currentModule]) = 5;
 	*(g_bits[currentModule]) = 5;
@@ -1475,8 +1476,6 @@ void D3DTEX_Init() {
 	*(g_offset[currentModule]) = 5;
 	*(b_offset[currentModule]) = 10;
 	*(a_offset[currentModule]) = 15;
-
-	log_printf(LL_INFO, "D3DTEX_INIT DONE!!!\n");
 }
 
 void D3DTEX_ConvertTexturePalette(uint16_t *palette, int size) {
@@ -1554,7 +1553,7 @@ void *openExternalTextureWrapper(char *a, char *b) {
 
 void makeTextureListEntry(struct texture *a, int b, int c, int d) {
 	uint32_t baseAddr = *((uint32_t *)0x539db4);
-	int **palFront[] = { baseAddr + 0x001891c8, baseAddr + 0x0021bc60, baseAddr + 0x001891c8 };
+	int **palFront[] = { baseAddr + 0x001891c8, baseAddr + 0x0021bc60, baseAddr + 0x001e4320 };
 
 	if (a->palette == NULL) {
 		int *pal = *(palFront[currentModule]);
@@ -1749,8 +1748,8 @@ void makeTextureListEntry(struct texture *a, int b, int c, int d) {
 		}
 			
 	} else {
-		int (__cdecl *PCread[])(void *, void *, uint32_t) = { baseAddr + 0x000212b0, baseAddr + 0x00077440, baseAddr + 0x000212b0 };
-		int (__cdecl *PCclose[])(void *) = { baseAddr + 0x00021380, baseAddr + 0x00077560, baseAddr + 0x00021380 };
+		int (__cdecl *PCread[])(void *, void *, uint32_t) = { baseAddr + 0x000212b0, baseAddr + 0x00077440, baseAddr + 0x000367c0 };
+		int (__cdecl *PCclose[])(void *) = { baseAddr + 0x00021380, baseAddr + 0x00077560, baseAddr + 0x000368e0 };
 			
 		// replace with bitmap
 		void *bmpfile = NULL;
@@ -1994,9 +1993,9 @@ typedef struct {
 void *__fastcall D3DSprite_D3DSprite(D3DSprite *sprite, void *pad, int a, char *b, char c, int d) {
 	uint32_t baseAddr = *((uint32_t *)0x539db4);
 
-	void *(__cdecl *operator_new[])(int sz) = { baseAddr + 0x00037dad, baseAddr + 0x0008f0a0, baseAddr + 0x00037dad };
-	void (__cdecl *operator_delete[])(void *) = { baseAddr + 0x00037b7f, baseAddr + 0x0008f095, baseAddr + 0x00037b7f };
-	void (__cdecl *D3DTEX_FreePaletteEntry[])(void *, int) = { baseAddr + 0x000176a0, baseAddr + 0x0006e5b0, baseAddr + 0x000176a0 };
+	void *(__cdecl *operator_new[])(int sz) = { baseAddr + 0x00037dad, baseAddr + 0x0008f0a0, baseAddr + 0x0004bc68 };
+	void (__cdecl *operator_delete[])(void *) = { baseAddr + 0x00037b7f, baseAddr + 0x0008f095, baseAddr + 0x0004bc5d };
+	void (__cdecl *D3DTEX_FreePaletteEntry[])(void *, int) = { baseAddr + 0x000176a0, baseAddr + 0x0006e5b0, baseAddr + 0x00030de0 };
 	//void (__cdecl *mem_delete)(void *) = 0x0046f460;
 
 	sprite->data = NULL;
@@ -2015,7 +2014,7 @@ void *__fastcall D3DSprite_D3DSprite(D3DSprite *sprite, void *pad, int a, char *
 
 	if (strcmp(b, "psxtex") == 0) {
 		
-		struct texture *(__cdecl *D3DTEX_AddToTextureList2[])(int a, int b, int c, int d, int e, int f, int g, int h) = { baseAddr + 0x00016a30, baseAddr + 0x0006d580, baseAddr + 0x00016a30 };
+		struct texture *(__cdecl *D3DTEX_AddToTextureList2[])(int a, int b, int c, int d, int e, int f, int g, int h) = { baseAddr + 0x00016a30, baseAddr + 0x0006d580, baseAddr + 0x00030180 };
 		//                        (param_1,*this,(short)DAT_10189018,(short)DAT_1018901c,&DAT_10188e18,DAT_10189020,0,0x800);
 		uint16_t *unk1[] = { baseAddr + 0x00189018, baseAddr + 0x0021bab0, baseAddr + 0x0 }; 
 		uint16_t *unk2[] = { baseAddr + 0x0018901c, baseAddr + 0x0021bab4, baseAddr + 0x0 }; 
@@ -2023,8 +2022,14 @@ void *__fastcall D3DSprite_D3DSprite(D3DSprite *sprite, void *pad, int a, char *
 		uint32_t *unk4[] = { baseAddr + 0x00189020, baseAddr + 0x0021bab8, baseAddr + 0x0 }; 
 		sprite->texture = D3DTEX_AddToTextureList2[currentModule](a, sprite->texture, *(unk1[currentModule]), *(unk2[currentModule]), unk3[currentModule], *(unk4[currentModule]), 0, 0x800);
 	} else if (strcmp(b, "rawbmp") == 0) {
-		struct texture *(__cdecl *D3DTEX_AddToTextureList3[])(int a, int b, int c, int d) = { baseAddr + 0x00016ad0, baseAddr + 0x0006d620, baseAddr + 0x00016ad0 };
+		struct texture *(__cdecl *D3DTEX_AddToTextureList3[])(int a, int b, int c, int d) = { baseAddr + 0x00016ad0, baseAddr + 0x0006d620, baseAddr + 0x00030220 };
 		sprite->texture = D3DTEX_AddToTextureList3[currentModule](a, sprite->texture, 1, b);
+	} else if (strcmp(b, "rawbmp4") == 0) {
+		// alternate function.  no idea what's up here
+		//printf("RAWBMP4!!!!\n");
+		struct texture *(__cdecl *D3DTEX_AddToTextureList3[])(int a, int b) = { baseAddr + 0x00017100, baseAddr + 0x0006dc40, baseAddr + 0x00030840 };
+		sprite->texture = D3DTEX_AddToTextureList3[currentModule](a, sprite->texture);
+		//printf("RAWBMP4 DONE!!!!\n");
 	} else {
 		printf("D3DSPRITE: loading sprite type %s!!!\n", b);
 	}
@@ -2101,10 +2106,18 @@ void m3dinit_setresolution() {
 	//int *width = 0x029d6fe4;
 	//int *height = 0x029d6fe8;
 
-	uint16_t *PixelAspectX[] = { baseAddr + 0x0, baseAddr + 0x000bf340, baseAddr + 0x0 };
-	uint16_t *PixelAspectY[] = { baseAddr + 0x0, baseAddr + 0x000bf344, baseAddr + 0x0 };
-	uint16_t *ResX[] = { baseAddr + 0x0, baseAddr + 0x0021bd14, baseAddr + 0x0 };
-	uint16_t *ResY[] = { baseAddr + 0x0, baseAddr + 0x0021bd18, baseAddr + 0x0 };
+	uint16_t *PixelAspectX[] = { baseAddr + 0x0, baseAddr + 0x000bf340, baseAddr + 0x0007ad24 };
+	uint16_t *PixelAspectY[] = { baseAddr + 0x0, baseAddr + 0x000bf344, baseAddr + 0x0007ad28 };
+	uint16_t *ResX[] = { baseAddr + 0x0, baseAddr + 0x0021bd14, baseAddr + 0x001e43d4 };
+	uint16_t *ResY[] = { baseAddr + 0x0, baseAddr + 0x0021bd18, baseAddr + 0x001e43d8 };
+
+	if (currentModule == 2) {
+		uint16_t *otherResX = baseAddr + 0x0007934c;
+		uint16_t *otherResY = baseAddr + 0x00079368;
+
+		*otherResX = *(ResX[currentModule]);
+		*otherResY = *(ResY[currentModule]);
+	}
 
 	//*ResX = *width;
 	//*ResY = *height;
@@ -2128,20 +2141,11 @@ void m3dinit_setresolution() {
 
 #define GRAPHICS_SECTION "Graphics"
 
-void WINMAIN_Configure() {
-	float *VideoFogYonScale = 0x00545334;
-	*VideoFogYonScale = (float)getConfigInt(GRAPHICS_SECTION, "FogDistance", 150) / 100.0f;
-
-	if (*VideoFogYonScale < 0.1f) {
-		*VideoFogYonScale = 0.1f;
-	} else if (*VideoFogYonScale > 5.0f) {
-		*VideoFogYonScale = 5.0f;
-	}
-
+void loadGfxSettings() {
 	textureFilter = getConfigInt(GRAPHICS_SECTION, "TextureFilter", 0);
 	//setTextureFilter(renderer, textureFilter);
 	
-	int resolution_setting = getConfigInt(GRAPHICS_SECTION, "InternalResolution", 0);
+	resolution_setting = getConfigInt(GRAPHICS_SECTION, "InternalResolution", 0);
 
 	switch(resolution_setting) {
 	case 0:
@@ -2182,6 +2186,55 @@ void WINMAIN_Configure() {
 	}
 
 	useHiResTextures = !getConfigBool(GRAPHICS_SECTION, "UsePSXTextures", 1);
+}
+
+void applyGfxSettings() {
+	uint32_t baseAddr = *((uint32_t *)0x539db4);
+	int *screen_width[] = { baseAddr + 0x0018984c, baseAddr + 0x0021bd14, baseAddr + 0x001e43d4 };
+	int *screen_height[] = { baseAddr + 0x00189850, baseAddr + 0x0021bd18, baseAddr + 0x001e43d8 };
+
+	//int *screen_width = 0x00537aac;
+	//int *screen_height = 0x00537ab0;
+
+	if (currentModule == 0 || currentModule == 2) {
+		resolution_x = 640;
+		resolution_y = 480;
+	} else {
+		switch(resolution_setting) {
+		case 0:
+			resolution_x = 512;
+			resolution_y = 240;
+			break;
+		case 1:
+			resolution_x = 640;
+			resolution_y = 480;
+			break;
+		case 2:
+			// prevent artifacts from rendering at too high a resolution
+			if (internal_resolution_x <= 1024 && internal_resolution_y <= 1024) {
+				resolution_x = internal_resolution_x;
+				resolution_y = internal_resolution_y;
+			} else if (resolution_y > resolution_x) {
+				resolution_y = 1024;
+				resolution_x = (float)resolution_y * aspectRatio;
+			} else {
+				resolution_x = 1024;
+				resolution_y = (float)resolution_x * (1.0f / aspectRatio);
+			}
+
+			break;
+		default:
+			resolution_x = 512;
+			resolution_y = 240;
+			break;
+		}
+	}
+
+	*(screen_width[currentModule]) = resolution_x;
+	*(screen_height[currentModule]) = resolution_y;
+
+	setRenderResolution(renderer, internal_resolution_x, internal_resolution_y, aspectRatio);
+	setTextureFilter(renderer, textureFilter);
 }
 
 void SaveVidConfig() {
@@ -2233,89 +2286,6 @@ void __fastcall fixChecklistFont(void *font, void *pad, int a, int b, int c, int
 	Font_Draw(font, NULL, a, b, c, d);
 }
 
-//float pushbackmult = 1.0f / 65535.0f; 
-float pushbackmult = 0.0f; 
-float f1 = 1.0f;
-
-
-
-int setDepthWrapper(int face, int unk, float bias, float unk2) {
-	int (__cdecl *setDepthOrig)(int, int, float, float) = 0x004cf8c0;
-
-	//printf("bias: %f\n", bias);
-
-	float *hither = 0x0057d4ec;
-	float *yon = 0x00599f8c;
-	int OTPushback = (int)bias;
-
-	float biasval = 0.0f;
-	/*int tmp = OTPushback;
-	while (tmp) {
-		biasval += 64.0f;
-		tmp >>= 1;
-	}*/
-
-	//bias = (bias * (128.0f / 65536.0f)) * *hither;
-
-	int result = setDepthOrig(face, unk, bias, unk2);
-
-	//printf("IN: %f, OUT: %d\n", unk2, result);
-
-	int *faceflags = 0x0058bf5c;
-
-	
-
-	for (int i = 0; i < *(int *)(face + 0x14); i++) {
-		float *z = NULL;
-		float *w = NULL;
-		if (*faceflags & 1) {
-			z = face + 0x20 + (i * 0x1c);
-			w = face + 0x24 + (i * 0x1c);
-		} else {
-			z = face + 0x20 + (i * 0x14);
-			w = face + 0x24 + (i * 0x14);
-		}
-
-		*z = *z / *w;
-
-		//printf("w: %f z: %f\n", *w, *z);
-
-		//*z -= bias * (1.0f / 65536.0f);
-		
-		/*if (*z > 1.0f) {
-			*z = 1.0f;
-		}
-		if (*z < 0.0f) {
-			*z = 0.0f;
-		}*/
-
-		*z = *z * *w;
-
-		if (bias == 0) {
-			//*z = -1.0f;
-		} else {
-		//	*z = *z - (biasval * (8.0f / 65535.0f));
-
-			//*z = 
-		}
-
-		//float r = *hither / (*yon - *hither);
-
-		//*z = *z * r * r * *hither;
-		//printf("h: %f, y: %f, r: %f\n", *hither, *yon, r);
-	}
-
-	result += OTPushback;
-
-	// OT placement is based on max z value on psx.  is that the case here???
-
-	if (result > 0xfff) {
-		result = 0xfff;
-	}
-
-	return result;
-}
-
 void installGfxPatches() {
 	patchJmp(0x004041c0, initDDraw);
 	patchJmp(0x004037b0, initD3D);
@@ -2323,6 +2293,8 @@ void installGfxPatches() {
 	patchNop(0x0040502e, 5);
 	
 	patchJmp(0x00401740, D3D_ClearBuffers);
+
+	
 	
 	/*
 	patchJmp(0x004d13f0, D3DPOLY_Init);
@@ -2441,6 +2413,8 @@ void installModuleGfxPatches(int module, uint32_t baseAddr) {
 		patchJmp(baseAddr + 0x000110b0, D3DPOLY_DrawOTag);
 		patchJmp(baseAddr + 0x00010d80, D3D_EndSceneAndFlip);
 		//patchJmp(baseAddr + 0x00015590, unkFunctionWithD3DStuff);
+
+		patchJmp(baseAddr + 0x0001a320, applyGfxSettings);
 	
 		patchJmp(baseAddr + 0x00017840, D3DTEX_Init);
 		//patchJmp(0x004d7430, D3DTEX_TextureCountColors);
@@ -2466,6 +2440,8 @@ void installModuleGfxPatches(int module, uint32_t baseAddr) {
 		patchJmp(baseAddr + 0x00068260, D3DPOLY_StartScene);
 		patchJmp(baseAddr + 0x00067d00, D3DPOLY_DrawOTag);
 		patchJmp(baseAddr + 0x00065580, D3D_EndSceneAndFlip);
+
+		patchJmp(baseAddr + 0x00071830, applyGfxSettings);
 	
 		patchJmp(baseAddr + 0x0006e860, D3DTEX_Init);
 		//patchJmp(0x004d7430, D3DTEX_TextureCountColors);
@@ -2502,6 +2478,25 @@ void installModuleGfxPatches(int module, uint32_t baseAddr) {
 
 		//patchByte(baseAddr + 0x000af354, 'P');
 		break;
+	case 2:
+		patchJmp(baseAddr + 0x0002b1e0, D3DPOLY_Init);
+		patchJmp(baseAddr + 0x0002acc0, D3DPOLY_StartScene);
+		patchJmp(baseAddr + 0x0002a760, D3DPOLY_DrawOTag);
+		patchJmp(baseAddr + 0x000288c0, D3D_EndSceneAndFlip);
+
+		patchJmp(baseAddr + 0x00032d50, applyGfxSettings);
+
+		patchJmp(baseAddr + 0x00031090, D3DTEX_Init);
+		patchJmp(baseAddr + 0x0002f470, makeTextureListEntry);
+
+		patchJmp(baseAddr + 0x00019260, m3dinit_setresolution);
+
+		// patch freeD3DTexture to call our code
+		patchNop(baseAddr + 0x0002f16c, 71);
+		patchByte(baseAddr + 0x0002f16c, 0x50);	// PUSH EAX
+		patchCall(baseAddr + 0x0002f16c + 1, freeD3DTexture);
+
+		patchJmp(baseAddr + 0x0002e0d0, D3DSprite_D3DSprite);
 	}
 
 }
