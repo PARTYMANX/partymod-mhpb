@@ -162,7 +162,13 @@ void D3DPOLY_StartScene(int a, int b) {
 
 	// hack to disable clearing when loading the park editor.  not sure what's up there but they set the clear color to white when it's supposed to be 0??
 	// there's something i don't get but I don't need to get it because i can cheat
+	if (currentModule == 1) {
+		printf("TEST!!!!: %d\n", *(uint32_t *)(baseAddr + 0x002203a8));
+	}
+
 	if (clearColor == 0xFFFFFFFF && currentModule == 2) {
+		clearColor = 0;
+	} else if ((clearColor & 0xFF000000) == 0 && currentModule == 1) {
 		clearColor = 0;
 	} else {
 		clearColor |= 0xFF000000;
@@ -482,7 +488,7 @@ void renderDXPoly(int *tag) {
 		} 
 
 		transformDXCoords(buf, outputVert);
-		drawVertices(renderer, buf, outputVert);
+		drawVertices(renderer, buf, outputVert, !(polyflags & 0x20));
 	} else {
 		struct dxpolytextured *vertices = ((uint8_t *)tag + 0x18);
 		uint32_t numVerts = *(uint32_t *)((uint8_t *)tag + 0x14);
@@ -575,7 +581,7 @@ void renderDXPoly(int *tag) {
 		} 
 
 		transformDXCoords(buf, outputVert);
-		drawVertices(renderer, buf, outputVert);
+		drawVertices(renderer, buf, outputVert, !(polyflags & 0x20));
 	}
 }
 
@@ -870,7 +876,7 @@ void renderPolyF3(int *tag) {
 
 	transformCoords(vertices, 3);
 
-	drawVertices(renderer, vertices, 3);
+	drawVertices(renderer, vertices, 3, 1);
 }
 
 void renderPolyF4(int *tag) {
@@ -910,7 +916,7 @@ void renderPolyF4(int *tag) {
 
 	transformCoords(vertices, 6);
 
-	drawVertices(renderer, vertices, 6);
+	drawVertices(renderer, vertices, 6, 1);
 }
 
 void renderPolyFT3(int *tag) {
@@ -956,7 +962,7 @@ void renderPolyFT3(int *tag) {
 		fixUVs(vertices, 3, tex);
 		transformCoords(vertices, 3);
 
-		drawVertices(renderer, vertices, 3);
+		drawVertices(renderer, vertices, 3, 1);
 	}
 }
 
@@ -1016,7 +1022,7 @@ void renderPolyFT4(int *tag) {
 		fixUVs(vertices, 6, tex);
 		transformCoords(vertices, 6);
 
-		drawVertices(renderer, vertices, 6);
+		drawVertices(renderer, vertices, 6, 1);
 	}
 }
 
@@ -1051,7 +1057,7 @@ void renderPolyG3(int *tag) {
 
 	transformCoords(vertices, 3);
 
-	drawVertices(renderer, vertices, 3);
+	drawVertices(renderer, vertices, 3, 1);
 }
 
 void renderPolyG4(int *tag) {
@@ -1092,7 +1098,7 @@ void renderPolyG4(int *tag) {
 
 	transformCoords(vertices, 6);
 
-	drawVertices(renderer, vertices, 6);
+	drawVertices(renderer, vertices, 6, 1);
 }
 
 void renderPolyGT3(int *tag) {
@@ -1140,7 +1146,7 @@ void renderPolyGT3(int *tag) {
 		fixUVs(vertices, 3, tex);
 		transformCoords(vertices, 3);
 
-		drawVertices(renderer, vertices, 3);
+		drawVertices(renderer, vertices, 3, 1);
 	}
 }
 
@@ -1198,7 +1204,7 @@ void renderPolyGT4(int *tag) {
 		fixUVs(vertices, 6, tex);
 		transformCoords(vertices, 6);
 
-		drawVertices(renderer, vertices, 6);
+		drawVertices(renderer, vertices, 6, 1);
 	}
 }
 
@@ -1241,7 +1247,7 @@ void renderTile(int *tag) {
 
 	transformCoords(vertices, 6);
 
-	drawVertices(renderer, vertices, 6);
+	drawVertices(renderer, vertices, 6, 1);
 }
 
 void renderTile1(int *tag) {

@@ -230,8 +230,13 @@ void appendPolyBuffer(partyRenderer *renderer, renderVertex *vertices, uint32_t 
 	}
 
 	if (vertices[0].texture > 0) {
-		if (!renderer->textureManager.occupied[vertices[0].texture]) {
-			log_printf(LL_ERROR, "Referencing freed texture %d!!!\n", vertices[0].texture);
+		int16_t targetTexture = vertices[0].texture;
+		if (targetTexture > renderer->textureManager.capacity) {
+			targetTexture -= renderer->textureManager.capacity;
+		}
+
+		if (!renderer->textureManager.occupied[targetTexture]) {
+			log_printf(LL_ERROR, "Referencing freed texture %d!!!\n", targetTexture);
 		}
 	}
 
@@ -259,10 +264,12 @@ void updatePolyBuffer(partyRenderer *renderer) {
 void createTextureManager(partyRenderer *renderer) {
 	textureManager result;
 
-	result.capacity = 2048;
+	result.capacity = 1024;
 	result.count = 0;
-	result.samplers[0] = createSampler(renderer, VK_FILTER_NEAREST);
-	result.samplers[1] = createSampler(renderer, VK_FILTER_LINEAR);
+	result.samplers[0] = createSampler(renderer, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT);
+	result.samplers[1] = createSampler(renderer, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT);
+	result.samplers[2] = createSampler(renderer, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+	result.samplers[3] = createSampler(renderer, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
 	result.images = malloc(sizeof(pmVkImage) * result.capacity);
 	result.occupied = calloc(result.capacity, sizeof(uint8_t));
 
@@ -303,7 +310,7 @@ void destroyTextureEntry(partyRenderer *renderer, uint32_t idx) {
 	renderer->textureManager.occupied[idx - 1] = 0;
 	renderer->textureManager.count--;
 
-	if (renderer->pendingImageDeletes->count > 1024) {
+	if (renderer->pendingImageDeletes->count > (renderer->textureManager.capacity / 2)) {
 		// emergency flush last half of pending image deletes.  something went horribly wrong 
 		// this can actually happen if images don't get cleared during a long-held soft reset
 
@@ -341,6 +348,7 @@ void writeTextureDescriptors(partyRenderer *renderer) {
 	while(count < renderer->textureManager.count) {
 		if (renderer->textureManager.occupied[i]) {
 			write_descriptor_image_array(renderer->descriptorAllocator, 0, i, renderer->textureManager.samplers[renderer->textureFilter], renderer->textureManager.images[i].imageView, VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+			write_descriptor_image_array(renderer->descriptorAllocator, 0, i + renderer->textureManager.capacity, renderer->textureManager.samplers[renderer->textureFilter + 2], renderer->textureManager.images[i].imageView, VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 			count++;
 		}
 
@@ -859,16 +867,19 @@ void setBlendState(partyRenderer *renderer, uint32_t mode) {
 	}
 }*/
 
-void drawVertices(partyRenderer *renderer, renderVertex *vertices, uint32_t vertex_count) {
+void drawVertices(partyRenderer *renderer, renderVertex *vertices, uint32_t vertex_count, uint8_t clamp_texture) {
 	//vkCmdDraw(renderer->renderCommandBuffer, vertex_count, 1, renderer->polyBuffer.currentVertex, 0);
 	// fix texture idx for each vertex
 	for (int i = 0; i < vertex_count; i++) {
-		if (vertices[i].texture > 1024) {
-			log_printf(LL_ERROR, "invalid texture: 0x%08x\n", vertices[i].texture);
+		if (vertices[i].texture > ((int16_t)renderer->textureManager.capacity)) {
+			log_printf(LL_ERROR, "invalid texture: 0x%04x\n", vertices[i].texture);
 			vertices[i].texture = -1;
 		}
 
 		vertices[i].texture -= 1;
+		if (vertices[i].texture >= 0 && clamp_texture) {
+			vertices[i].texture += renderer->textureManager.capacity;
+		}
 	}
 
 	if (renderer->currentLineState) {

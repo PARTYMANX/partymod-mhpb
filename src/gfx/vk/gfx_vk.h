@@ -49,7 +49,7 @@ void updateRenderer(partyRenderer *renderer);
 
 void startRender(partyRenderer *renderer, uint32_t clearColor);
 void finishRender(partyRenderer *renderer);
-void drawVertices(partyRenderer *renderer, renderVertex *vertices, uint32_t vertex_count);
+void drawVertices(partyRenderer *renderer, renderVertex *vertices, uint32_t vertex_count, uint8_t clamp);
 //void drawTriangleFan(partyRenderer *renderer, renderVertex *vertices, uint32_t vertex_count);
 void drawLines(partyRenderer *renderer, renderVertex *vertices, uint32_t vertex_count);
 void setViewport(partyRenderer *renderer, float x, float y, float width, float height);
