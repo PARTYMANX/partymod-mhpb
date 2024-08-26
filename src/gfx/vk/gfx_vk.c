@@ -484,7 +484,7 @@ uint8_t CreateVKRenderer(void *windowHandle, partyRenderer **renderer) {
 	log_printf(LL_DEBUG, "Creating render targets...\n");
 
 	// create default render targets at 640x480, 4:3
-	createRenderTargets(result, 640, 480, VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_D24_UNORM_S8_UINT);
+	createRenderTargets(result, 640, 480, GFX_COLOR_FORMAT, GFX_DEPTH_FORMAT);
 	result->aspectRatio = 4.0f / 3.0f;
 	result->renderWidth = 640;
 	result->renderHeight = 480;
@@ -650,7 +650,7 @@ void startRender(partyRenderer *renderer, uint32_t clearCol) {
 	if (renderer->renderWidth != renderer->renderImage.width || renderer->renderHeight != renderer->renderImage.height) {
 		log_printf(LL_INFO, "Adjusting internal render resolution from %dx%d to %dx%d\n", renderer->renderImage.width, renderer->renderImage.height, renderer->renderWidth, renderer->renderHeight);
 		destroyRenderTargets(renderer);
-		createRenderTargets(renderer, renderer->renderWidth, renderer->renderHeight, VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_D24_UNORM_S8_UINT);
+		createRenderTargets(renderer, renderer->renderWidth, renderer->renderHeight, GFX_COLOR_FORMAT, GFX_DEPTH_FORMAT);
 
 		imageInfo info = { renderer->renderImage.width, renderer->renderImage.height };
 		imageInfo *buffer = mapBuffer(renderer, &renderer->renderImageInfoBuffer);
@@ -871,12 +871,13 @@ void drawVertices(partyRenderer *renderer, renderVertex *vertices, uint32_t vert
 	//vkCmdDraw(renderer->renderCommandBuffer, vertex_count, 1, renderer->polyBuffer.currentVertex, 0);
 	// fix texture idx for each vertex
 	for (int i = 0; i < vertex_count; i++) {
+		vertices[i].texture -= 1;
+
 		if (vertices[i].texture > ((int16_t)renderer->textureManager.capacity)) {
 			log_printf(LL_ERROR, "invalid texture: 0x%04x\n", vertices[i].texture);
 			vertices[i].texture = -1;
 		}
 
-		vertices[i].texture -= 1;
 		if (vertices[i].texture >= 0 && clamp_texture) {
 			vertices[i].texture += renderer->textureManager.capacity;
 		}

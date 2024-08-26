@@ -20,6 +20,15 @@ void main() {
 			//}
 		}
 
+		if ((fflags & 2) != 0) {
+			// masked transparency, discard all below a certain threshold
+			if (texcolor.a < 0.5) {
+				discard;
+			} else {
+				texcolor.a = 1.0;
+			}
+		}
+
 		if ((fflags & 1) != 0) {
 			fragColor = vertcolor * texcolor;
 		} else {

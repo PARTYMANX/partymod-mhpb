@@ -26,7 +26,7 @@ uint8_t useHiResTextures = 1;
 int sfx_vol = 10;
 int music_vol = 10;
 
-int isMinimized = 0;
+extern int isMinimized = 0;
 
 // hack: don't brighten any of these textures
 uint32_t badHDTextureCount = 10;
@@ -142,7 +142,7 @@ void D3DPOLY_StartScene(int a, int b) {
 	if (currentModule == 1) {
 		uint8_t *glevel = baseAddr + 0x00220a93;
 
-		//printf("LEVEL: 0x%08x\n", *glevel);
+		printf("LEVEL: 0x%08x\n", *glevel);
 	}
 
 	*(startscene[currentModule]) = 1;
@@ -163,13 +163,14 @@ void D3DPOLY_StartScene(int a, int b) {
 	// hack to disable clearing when loading the park editor.  not sure what's up there but they set the clear color to white when it's supposed to be 0??
 	// there's something i don't get but I don't need to get it because i can cheat
 	if (currentModule == 1) {
-		printf("TEST!!!!: %d\n", *(uint32_t *)(baseAddr + 0x002203a8));
+		//printf("TEST!!!!: %d\n", *(uint32_t *)(baseAddr + 0x002203a8));
 	}
 
 	if (clearColor == 0xFFFFFFFF && currentModule == 2) {
 		clearColor = 0;
 	} else if ((clearColor & 0xFF000000) == 0 && currentModule == 1) {
-		clearColor = 0;
+		//clearColor = 0;
+		clearColor |= 0xFF000000;
 	} else {
 		clearColor |= 0xFF000000;
 	}
@@ -542,6 +543,15 @@ void renderDXPoly(int *tag) {
 					break;
 				}
 			}
+		}
+
+		// stupid hack: to avoid visual artifacts, threshold out transparencies on burnside and treatment plant (including 4:4:4:4!!! ahhhh!!!!!!)
+		if (currentModule == 1) {
+			uint32_t baseAddr = *((uint32_t *)0x539db4);
+			uint8_t *glevel = baseAddr + 0x00220a93;
+
+			if (*glevel == 0x09 || *glevel == 0x10)
+			renderFlags |= 2;
 		}
 
 		int outputVert = 0;

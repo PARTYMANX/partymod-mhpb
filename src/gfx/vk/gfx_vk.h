@@ -9,6 +9,10 @@
 #include <vulkan/vulkan.h>
 
 #define FLUSH_ALL
+#define GFX_COLOR_FORMAT VK_FORMAT_B8G8R8A8_UNORM
+#define GFX_DEPTH_FORMAT VK_FORMAT_D24_UNORM_S8_UINT	// used by MHPB
+//#define GFX_DEPTH_FORMAT VK_FORMAT_D16_UNORM	// used by THPS2
+#define SHADERS_FROM_FILE
 
 /*
 	STRUCT

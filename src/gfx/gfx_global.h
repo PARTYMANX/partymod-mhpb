@@ -4,6 +4,7 @@
 #include <gfx/vk/gfx_vk.h>
 
 partyRenderer *renderer;
+int isMinimized;
 
 struct texture {
 	uint32_t idx;
