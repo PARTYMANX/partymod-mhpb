@@ -136,15 +136,6 @@ void D3DPOLY_StartScene(int a, int b) {
 
 	//printf("STUB: D3DPOLY_StartScene: 0x%08x 0x%08x\n", a, b);
 
-	//float *fog = 0x00546b38;
-	//*fog = 10000.0f;
-
-	if (currentModule == 1) {
-		uint8_t *glevel = baseAddr + 0x00220a93;
-
-		printf("LEVEL: 0x%08x\n", *glevel);
-	}
-
 	*(startscene[currentModule]) = 1;
 
 	//updateMovieTexture();	// a bit of a hack: update the movie texture here in the main thread, as the music thread also updates it.  not exactly safe, but it avoids invalid vulkan use
@@ -160,17 +151,14 @@ void D3DPOLY_StartScene(int a, int b) {
 
 	uint32_t clearColor = fixDXColor(b);
 
-	// hack to disable clearing when loading the park editor.  not sure what's up there but they set the clear color to white when it's supposed to be 0??
-	// there's something i don't get but I don't need to get it because i can cheat
-	if (currentModule == 1) {
-		//printf("TEST!!!!: %d\n", *(uint32_t *)(baseAddr + 0x002203a8));
-	}
-
 	if (clearColor == 0xFFFFFFFF && currentModule == 2) {
+		// hack to disable clearing when loading the park editor.  not sure what's up there but they set the clear color to white when it's supposed to be 0??
+		// there's something i don't get but I don't need to get it because i can cheat
 		clearColor = 0;
-	} else if ((clearColor & 0xFF000000) == 0 && currentModule == 1) {
-		//clearColor = 0;
-		clearColor |= 0xFF000000;
+	} else if (currentModule == 1 && *(uint8_t *)(baseAddr + 0x00220a99) == 8) {
+		// if we're in granny loading screen, don't clear screen
+		clearColor = 0;
+		//clearColor |= 0xFF000000;
 	} else {
 		clearColor |= 0xFF000000;
 	}
@@ -2437,7 +2425,7 @@ void installModuleGfxPatches(int module, uint32_t baseAddr) {
 		patchJmp(baseAddr + 0x00010d80, D3D_EndSceneAndFlip);
 		//patchJmp(baseAddr + 0x00015590, unkFunctionWithD3DStuff);
 
-		patchJmp(baseAddr + 0x0001a320, applyGfxSettings);
+		//patchJmp(baseAddr + 0x0001a320, applyGfxSettings);
 	
 		patchJmp(baseAddr + 0x00017840, D3DTEX_Init);
 		//patchJmp(0x004d7430, D3DTEX_TextureCountColors);
@@ -2464,7 +2452,7 @@ void installModuleGfxPatches(int module, uint32_t baseAddr) {
 		patchJmp(baseAddr + 0x00067d00, D3DPOLY_DrawOTag);
 		patchJmp(baseAddr + 0x00065580, D3D_EndSceneAndFlip);
 
-		patchJmp(baseAddr + 0x00071830, applyGfxSettings);
+		//patchJmp(baseAddr + 0x00071830, applyGfxSettings);
 	
 		patchJmp(baseAddr + 0x0006e860, D3DTEX_Init);
 		//patchJmp(0x004d7430, D3DTEX_TextureCountColors);
@@ -2507,7 +2495,7 @@ void installModuleGfxPatches(int module, uint32_t baseAddr) {
 		patchJmp(baseAddr + 0x0002a760, D3DPOLY_DrawOTag);
 		patchJmp(baseAddr + 0x000288c0, D3D_EndSceneAndFlip);
 
-		patchJmp(baseAddr + 0x00032d50, applyGfxSettings);
+		//patchJmp(baseAddr + 0x00032d50, applyGfxSettings);
 
 		patchJmp(baseAddr + 0x00031090, D3DTEX_Init);
 		patchJmp(baseAddr + 0x0002f470, makeTextureListEntry);

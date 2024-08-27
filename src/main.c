@@ -93,19 +93,105 @@ void quitGame() {
 	exit(0);
 }
 
-void loadAudioConfig() {
-	//uint32_t baseAddr = *((uint32_t *)0x539db4);
+void getSoundConfig(uint16_t *soundVolume, uint16_t *musicVolume) {
+	if (soundVolume) {
+		*soundVolume = getBMXConfigInt("Audio", "SoundVolume", 7);
 
+		if (*soundVolume < 0) {
+			*soundVolume = 0;
+		}
+
+		if (*soundVolume > 10) {
+			*soundVolume = 10;
+		}
+	}
+
+	if (musicVolume) {
+		*musicVolume = getBMXConfigInt("Audio", "MusicVolume", 6);
+
+		if (*musicVolume < 0) {
+			*musicVolume = 0;
+		}
+
+		if (*musicVolume > 10) {
+			*musicVolume = 10;
+		}
+	}
+}
+
+void writeSoundConfig(uint16_t soundVolume, uint16_t musicVolume) {
+	if (soundVolume < 0) {
+		soundVolume = 0;
+	}
+
+	if (soundVolume > 10) {
+		soundVolume = 10;
+	}
+
+	writeBMXConfigInt("Audio", "SoundVolume", soundVolume);
+	
+	if (musicVolume < 0) {
+		musicVolume = 0;
+	}
+
+	if (musicVolume > 10) {
+		musicVolume = 10;
+	}
+
+	writeBMXConfigInt("Audio", "MusicVolume", musicVolume);
+}
+
+void readBMXConfig() {
 	uint16_t *sound_vol = 0x0053c12e;
 	uint16_t *music_vol = 0x0053c130;
 
-	*sound_vol = 7;
-	*music_vol = 6;
+	getSoundConfig(sound_vol, music_vol);
+
+	loadGfxSettings();
 }
 
-void loadConfig() {
-	loadAudioConfig();
-	loadGfxSettings();
+void readModuleConfig() {
+	uint32_t baseAddr = *((uint32_t *)0x539db4);
+
+	uint16_t *soundVolume[] = { baseAddr + 0x0018f0ae, baseAddr + 0x00220a8e, baseAddr + 0x001e898e };
+	uint16_t *musicVolume[] = { baseAddr + 0x0018f0b0, baseAddr + 0x00220a90, baseAddr + 0x001e8990 };
+
+	getSoundConfig(soundVolume[currentModule], musicVolume[currentModule]);
+
+	applyGfxSettings();
+}
+
+void writeBMXConfig() {
+	uint16_t *sound_vol = 0x0053c12e;
+	uint16_t *music_vol = 0x0053c130;
+
+	writeSoundConfig(*sound_vol, *music_vol);
+}
+
+void writeModuleConfig() {
+	uint32_t baseAddr = *((uint32_t *)0x539db4);
+
+	uint16_t *soundVolume[] = { baseAddr + 0x0018f0ae, baseAddr + 0x00220a8e, baseAddr + 0x001e898e };
+	uint16_t *musicVolume[] = { baseAddr + 0x0018f0b0, baseAddr + 0x00220a90, baseAddr + 0x001e8990 };
+
+	writeSoundConfig(*(soundVolume[currentModule]), *(musicVolume[currentModule]));
+}
+
+void patchConfigReadWrite(int module, uint32_t baseAddr) {
+	switch(module) {
+	case 0:
+		patchJmp(baseAddr + 0x0001a320, readModuleConfig);
+		patchJmp(baseAddr + 0x0001a470, writeModuleConfig);
+		break;
+	case 1:
+		patchJmp(baseAddr + 0x00071830, readModuleConfig);
+		patchJmp(baseAddr + 0x00071980, writeModuleConfig);
+		break;
+	case 2:
+		patchJmp(baseAddr + 0x00032d50, readModuleConfig);
+		patchJmp(baseAddr + 0x00032ea0, writeModuleConfig);
+		break;
+	}
 }
 
 int WinYield() {
@@ -126,7 +212,8 @@ void patchWindowAndInit() {
 	
 	patchJmp(0x00405f90, WinYield);
 
-	patchJmp(0x004049e0, loadConfig);
+	patchJmp(0x004049e0, readBMXConfig);
+	patchJmp(0x00404b30, writeBMXConfig);
 }
 
 void patchModuleEventHandler(int module, uint32_t baseAddr) {
@@ -139,20 +226,6 @@ void patchModuleEventHandler(int module, uint32_t baseAddr) {
 		break;
 	case 2:
 		patchJmp(baseAddr + 0x00038a70, WinYield);
-		break;
-	}
-}
-
-void patchConfigReadWrite(int module, uint32_t baseAddr) {
-	switch(module) {
-	case 0:
-		//patchJmp(baseAddr + 0x00024240, WinYield);
-		break;
-	case 1:
-		patchJmp(baseAddr + 0x00071830, WinYield);
-		break;
-	case 2:
-		//patchJmp(baseAddr + 0x00038a70, WinYield);
 		break;
 	}
 }
@@ -190,6 +263,7 @@ int _cdecl loadModuleWrapper(char *name) {
 		installModuleGfxPatches(currentModule, baseAddr);
 		patchModuleEventHandler(currentModule, baseAddr);
 		installModuleInputPatches(currentModule, baseAddr);
+		patchConfigReadWrite(currentModule, baseAddr);
 	}
 
 	return result;

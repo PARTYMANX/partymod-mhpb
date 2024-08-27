@@ -895,6 +895,7 @@ void installModuleInputPatches(int module, uint32_t baseAddr) {
 	case 0:	
 		patchJmp(baseAddr + 0x0001a0b0, PCINPUT_Load);	// init directinput
 		patchJmp(baseAddr + 0x000205f0, PCINPUT_Load);	// create devices
+		patchJmp(baseAddr + 0x00020080, PCINPUT_Load);	// write config
 		patchJmp(baseAddr + 0x00020140, GetButtonState);	// get button
 		patchJmp(baseAddr + 0x00020690, ReadDirectInput);	// poll keyboard
 		patchJmp(baseAddr + 0x0001b050, fakepollcontroller);	// poll controller (skip)
@@ -905,6 +906,7 @@ void installModuleInputPatches(int module, uint32_t baseAddr) {
 	case 1:
 		patchJmp(baseAddr + 0x00070ac0, PCINPUT_Load);	// init directinput
 		patchJmp(baseAddr + 0x00076750, PCINPUT_Load);	// create devices
+		patchJmp(baseAddr + 0x00075ea0, PCINPUT_Load);	// write config
 		patchJmp(baseAddr + 0x00075f60, GetButtonState);	// get button
 		patchJmp(baseAddr + 0x000767f0, ReadDirectInput);	// poll keyboard
 		patchJmp(baseAddr + 0x000723a0, fakepollcontroller);	// poll controller (skip)
@@ -915,6 +917,7 @@ void installModuleInputPatches(int module, uint32_t baseAddr) {
 	case 2:
 		patchJmp(baseAddr + 0x00032b80, PCINPUT_Load);	// init directinput
 		patchJmp(baseAddr + 0x000359a0, PCINPUT_Load);	// create devices
+		patchJmp(baseAddr + 0x00035430, PCINPUT_Load);	// write config
 		patchJmp(baseAddr + 0x000354f0, GetButtonState);	// get button
 		patchJmp(baseAddr + 0x00035a40, ReadDirectInput);	// poll keyboard
 		patchJmp(baseAddr + 0x00033a40, fakepollcontroller);	// poll controller (skip)
