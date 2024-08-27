@@ -616,6 +616,9 @@ uint8_t validateShard(renderVertex *vertices, int count) {
 int aaa = 640;
 int bbb = 480;
 
+float smallestbig = 100000.0f;
+float biggestbig = -100000.0f;
+
 void transformCoords(renderVertex *vertices, int count) {
 	uint32_t baseAddr = *((uint32_t *)0x539db4);
 	int *screen_width[] = { baseAddr + 0x0018984c, baseAddr + 0x0021bd14, baseAddr + 0x001e43d4 };
@@ -639,6 +642,10 @@ void transformCoords(renderVertex *vertices, int count) {
 	for (int i = 0; i < count; i++) {
 		if (vertices[i].y > 4369.0f - (float)*(screen_height[currentModule]) && on_screen) {
 			vertices[i].y -= 4369.0f;
+		}
+
+		if (vertices[i].x > 26213.0f - (float)*(screen_width[currentModule]) - 100.0f && on_screen) {
+			vertices[i].x -= 26213.0f;
 		}
 	}
 

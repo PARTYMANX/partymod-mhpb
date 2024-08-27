@@ -99,8 +99,8 @@ void loadAudioConfig() {
 	uint16_t *sound_vol = 0x0053c12e;
 	uint16_t *music_vol = 0x0053c130;
 
-	sound_vol = 7;
-	music_vol = 6;
+	*sound_vol = 7;
+	*music_vol = 6;
 }
 
 void loadConfig() {
@@ -139,6 +139,20 @@ void patchModuleEventHandler(int module, uint32_t baseAddr) {
 		break;
 	case 2:
 		patchJmp(baseAddr + 0x00038a70, WinYield);
+		break;
+	}
+}
+
+void patchConfigReadWrite(int module, uint32_t baseAddr) {
+	switch(module) {
+	case 0:
+		//patchJmp(baseAddr + 0x00024240, WinYield);
+		break;
+	case 1:
+		patchJmp(baseAddr + 0x00071830, WinYield);
+		break;
+	case 2:
+		//patchJmp(baseAddr + 0x00038a70, WinYield);
 		break;
 	}
 }

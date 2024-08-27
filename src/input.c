@@ -652,6 +652,14 @@ int __cdecl getSomethingIdk(int a) {
 
 int __cdecl GetButtonState(int mask, int just, int unk) {
 	//printf("GET BUTTON STATE: 0x%08x, %d %d\n", mask, just, unk);
+	uint32_t baseAddr = *((uint32_t *)0x539db4);
+
+	uint32_t *forcedButtons[] = { baseAddr + 0x0018c758, baseAddr + 0x0021e8b0, baseAddr + 0x001e6a60 };
+
+	if (*(forcedButtons[currentModule]) & mask) {
+		*(forcedButtons[currentModule]) = *(forcedButtons[currentModule]) & ~mask;
+		return 1;
+	}
 
 	uint16_t controlsMask = 0x0000;
 
