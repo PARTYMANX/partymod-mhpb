@@ -867,7 +867,6 @@ struct settings {
 	int borderless;
 
 	int use_psx_textures;
-	int fog_distance;
 	int texture_filter;
 	int internal_resolution;
 
@@ -1016,7 +1015,6 @@ void defaultSettings() {
 	settings.borderless = 0;
 
 	settings.use_psx_textures = 1;
-	settings.fog_distance = 150;
 	settings.texture_filter = 0;
 	settings.internal_resolution = 0;
 	
@@ -1088,8 +1086,7 @@ void loadSettings() {
 	settings.windowed = getIniBool("Window", "Windowed", 0, configFile);
 	settings.borderless = getIniBool("Window", "Borderless", 0, configFile);
 
-	settings.use_psx_textures = getIniBool("Graphics", "UsePSXTextures", 1, configFile);
-	settings.fog_distance = GetPrivateProfileInt("Graphics", "FogDistance", 1, configFile);
+	settings.use_psx_textures = getIniBool("Graphics", "NoOverrideTextures", 1, configFile);
 	settings.texture_filter = GetPrivateProfileInt("Graphics", "TextureFilter", 0, configFile);
 	settings.internal_resolution = GetPrivateProfileInt("Graphics", "InternalResolution", 0, configFile);
 
@@ -1150,8 +1147,7 @@ void saveSettings() {
 	writeIniBool("Window", "Windowed", settings.windowed, configFile);
 	writeIniBool("Window", "Borderless", settings.borderless, configFile);
 
-	writeIniBool("Graphics", "UsePSXTextures", settings.use_psx_textures, configFile);
-	writeIniInt("Graphics", "FogDistance", settings.fog_distance, configFile);
+	writeIniBool("Graphics", "NoOverrideTextures", settings.use_psx_textures, configFile);
 	writeIniInt("Graphics", "TextureFilter", settings.texture_filter, configFile);
 	writeIniInt("Graphics", "InternalResolution", settings.internal_resolution, configFile);
 
@@ -1464,7 +1460,7 @@ void do_setting_combobox(pgui_control *control, int value, int *target) {
 
 void build_gamepad_page(pgui_control *parent) {
 	pgui_control *actions_groupbox = pgui_groupbox_create(8, 8, (parent->w / 2) - 8 - 4, parent->h - 8 - 8, "Actions", parent);
-	pgui_control *skater_groupbox = pgui_groupbox_create((parent->w / 2) + 4, 8, (parent->w / 2) - 8 - 4, (parent->h / 2) - 8 - 4 + 32, "Skater Controls", parent);
+	pgui_control *skater_groupbox = pgui_groupbox_create((parent->w / 2) + 4, 8, (parent->w / 2) - 8 - 4, (parent->h / 2) - 8 - 4 + 32, "Rider Controls", parent);
 	pgui_control *camera_groupbox = pgui_groupbox_create((parent->w / 2) + 4, (parent->h / 2) + 4 + 32, (parent->w / 2) - 8 - 4, (parent->h / 2) - 8 - 4 - 32, "Other", parent);
 
 	int label_offset = 4;
@@ -1475,13 +1471,13 @@ void build_gamepad_page(pgui_control *parent) {
 
 	// actions
 
-	pgui_label_create(8, 16 + label_offset, 96, 16, "Ollie:", PGUI_LABEL_JUSTIFY_LEFT, actions_groupbox);
+	pgui_label_create(8, 16 + label_offset, 96, 16, "Bunnyhop:", PGUI_LABEL_JUSTIFY_LEFT, actions_groupbox);
 	gamepad_page.ollie = build_button_combobox(actions_groupbox->w - 8 - box_width, 16, box_width, 20, actions_groupbox, &(padbinds.ollie));
 
-	pgui_label_create(8, 16 + label_offset + (graphics_v_spacing), 96, 16, "Grab:", PGUI_LABEL_JUSTIFY_LEFT, actions_groupbox);
+	pgui_label_create(8, 16 + label_offset + (graphics_v_spacing), 96, 16, "Air Trick:", PGUI_LABEL_JUSTIFY_LEFT, actions_groupbox);
 	gamepad_page.grab = build_button_combobox(actions_groupbox->w - 8 - box_width, 16 + (graphics_v_spacing), box_width, 20, actions_groupbox, &(padbinds.grab));
 
-	pgui_label_create(8, 16 + label_offset + (graphics_v_spacing * 2), 96, 16, "Flip:", PGUI_LABEL_JUSTIFY_LEFT, actions_groupbox);
+	pgui_label_create(8, 16 + label_offset + (graphics_v_spacing * 2), 96, 16, "Quick Trick:", PGUI_LABEL_JUSTIFY_LEFT, actions_groupbox);
 	gamepad_page.flip = build_button_combobox(actions_groupbox->w - 8 - box_width, 16 + (graphics_v_spacing * 2), box_width, 20, actions_groupbox, &(padbinds.kick));
 
 	pgui_label_create(8, 16 + label_offset + (graphics_v_spacing * 3), 96, 16, "Grind:", PGUI_LABEL_JUSTIFY_LEFT, actions_groupbox);
@@ -1493,10 +1489,10 @@ void build_gamepad_page(pgui_control *parent) {
 	pgui_label_create(8, 16 + label_offset + (graphics_v_spacing * 5), 96, 16, "Spin Right:", PGUI_LABEL_JUSTIFY_LEFT, actions_groupbox);
 	gamepad_page.spin_right = build_button_combobox(actions_groupbox->w - 8 - box_width, 16 + (graphics_v_spacing * 5), box_width, 20, actions_groupbox, &(padbinds.rightSpin));
 
-	pgui_label_create(8, 16 + label_offset + (graphics_v_spacing * 6), 96, 16, "Nollie:", PGUI_LABEL_JUSTIFY_LEFT, actions_groupbox);
+	pgui_label_create(8, 16 + label_offset + (graphics_v_spacing * 6), 96, 16, "Fakie Left:", PGUI_LABEL_JUSTIFY_LEFT, actions_groupbox);
 	gamepad_page.nollie = build_button_combobox(actions_groupbox->w - 8 - box_width, 16 + (graphics_v_spacing * 6), box_width, 20, actions_groupbox, &(padbinds.nollie));
 
-	pgui_label_create(8, 16 + label_offset + (graphics_v_spacing * 7), 96, 16, "Switch:", PGUI_LABEL_JUSTIFY_LEFT, actions_groupbox);
+	pgui_label_create(8, 16 + label_offset + (graphics_v_spacing * 7), 96, 16, "Fakie Right:", PGUI_LABEL_JUSTIFY_LEFT, actions_groupbox);
 	gamepad_page.switch_revert = build_button_combobox(actions_groupbox->w - 8 - box_width, 16 + (graphics_v_spacing * 7), box_width, 20, actions_groupbox, &(padbinds.switchRevert));
 
 	// skater controls
@@ -1596,7 +1592,7 @@ pgui_control *build_keybind_textbox(int x, int y, int w, int h, pgui_control *pa
 
 void build_keyboard_page(pgui_control *parent) {
 	pgui_control *actions_groupbox = pgui_groupbox_create(8, 8, (parent->w / 2) - 8 - 4, parent->h - 8 - 8, "Actions", parent);
-	pgui_control *skater_groupbox = pgui_groupbox_create((parent->w / 2) + 4, 8, (parent->w / 2) - 8 - 4, (parent->h / 2) - 8 - 4 + 32, "Skater Controls", parent);
+	pgui_control *skater_groupbox = pgui_groupbox_create((parent->w / 2) + 4, 8, (parent->w / 2) - 8 - 4, (parent->h / 2) - 8 - 4 + 32, "Rider Controls", parent);
 	pgui_control *camera_groupbox = pgui_groupbox_create((parent->w / 2) + 4, (parent->h / 2) + 4 + 32, (parent->w / 2) - 8 - 4, (parent->h / 2) - 8 - 4 - 32, "Other", parent);
 
 	int label_offset = 4;
@@ -1606,14 +1602,14 @@ void build_keyboard_page(pgui_control *parent) {
 
 	// actions
 
-	pgui_label_create(8, 16 + label_offset, 96, 16, "Ollie:", PGUI_LABEL_JUSTIFY_LEFT, actions_groupbox);
-	keyboard_page.ollie = build_keybind_textbox(actions_groupbox->w - 8 - 64, 16, 64, 20, actions_groupbox, "Ollie", &(keybinds.ollie));
+	pgui_label_create(8, 16 + label_offset, 96, 16, "Bunnyhop:", PGUI_LABEL_JUSTIFY_LEFT, actions_groupbox);
+	keyboard_page.ollie = build_keybind_textbox(actions_groupbox->w - 8 - 64, 16, 64, 20, actions_groupbox, "Bunnyhop", &(keybinds.ollie));
 
-	pgui_label_create(8, 16 + label_offset + (actions_v_spacing), 96, 16, "Grab:", PGUI_LABEL_JUSTIFY_LEFT, actions_groupbox);
-	keyboard_page.grab = build_keybind_textbox(actions_groupbox->w - 8 - 64, 16 + (actions_v_spacing), 64, 20, actions_groupbox, "Grab", &(keybinds.grab));
+	pgui_label_create(8, 16 + label_offset + (actions_v_spacing), 96, 16, "Air Trick:", PGUI_LABEL_JUSTIFY_LEFT, actions_groupbox);
+	keyboard_page.grab = build_keybind_textbox(actions_groupbox->w - 8 - 64, 16 + (actions_v_spacing), 64, 20, actions_groupbox, "Air Trick", &(keybinds.grab));
 
-	pgui_label_create(8, 16 + label_offset + (actions_v_spacing * 2), 96, 16, "Flip:", PGUI_LABEL_JUSTIFY_LEFT, actions_groupbox);
-	keyboard_page.flip = build_keybind_textbox(actions_groupbox->w - 8 - 64, 16 + (actions_v_spacing * 2), 64, 20, actions_groupbox, "Flip", &(keybinds.flip));
+	pgui_label_create(8, 16 + label_offset + (actions_v_spacing * 2), 96, 16, "Quick Trick:", PGUI_LABEL_JUSTIFY_LEFT, actions_groupbox);
+	keyboard_page.flip = build_keybind_textbox(actions_groupbox->w - 8 - 64, 16 + (actions_v_spacing * 2), 64, 20, actions_groupbox, "Quick Trick", &(keybinds.flip));
 
 	pgui_label_create(8, 16 + label_offset + (actions_v_spacing * 3), 96, 16, "Grind:", PGUI_LABEL_JUSTIFY_LEFT, actions_groupbox);
 	keyboard_page.grind = build_keybind_textbox(actions_groupbox->w - 8 - 64, 16 + (actions_v_spacing * 3), 64, 20, actions_groupbox, "Grind", &(keybinds.grind));
@@ -1624,11 +1620,11 @@ void build_keyboard_page(pgui_control *parent) {
 	pgui_label_create(8, 16 + label_offset + (actions_v_spacing * 5), 96, 16, "Spin Right:", PGUI_LABEL_JUSTIFY_LEFT, actions_groupbox);
 	keyboard_page.spin_right = build_keybind_textbox(actions_groupbox->w - 8 - 64, 16 + (actions_v_spacing * 5), 64, 20, actions_groupbox, "Spin Right", &(keybinds.spinRight));
 
-	pgui_label_create(8, 16 + label_offset + (actions_v_spacing * 6), 96, 16, "Nollie:", PGUI_LABEL_JUSTIFY_LEFT, actions_groupbox);
-	keyboard_page.nollie = build_keybind_textbox(actions_groupbox->w - 8 - 64, 16 + (actions_v_spacing * 6), 64, 20, actions_groupbox, "Nollie", &(keybinds.nollie));
+	pgui_label_create(8, 16 + label_offset + (actions_v_spacing * 6), 96, 16, "Fakie Left:", PGUI_LABEL_JUSTIFY_LEFT, actions_groupbox);
+	keyboard_page.nollie = build_keybind_textbox(actions_groupbox->w - 8 - 64, 16 + (actions_v_spacing * 6), 64, 20, actions_groupbox, "Fakie Left", &(keybinds.nollie));
 
-	pgui_label_create(8, 16 + label_offset + (actions_v_spacing * 7), 96, 16, "Switch:", PGUI_LABEL_JUSTIFY_LEFT, actions_groupbox);
-	keyboard_page.switch_revert = build_keybind_textbox(actions_groupbox->w - 8 - 64, 16 + (actions_v_spacing * 7), 64, 20, actions_groupbox, "Switch", &(keybinds.switchRevert));
+	pgui_label_create(8, 16 + label_offset + (actions_v_spacing * 7), 96, 16, "Fakie Right:", PGUI_LABEL_JUSTIFY_LEFT, actions_groupbox);
+	keyboard_page.switch_revert = build_keybind_textbox(actions_groupbox->w - 8 - 64, 16 + (actions_v_spacing * 7), 64, 20, actions_groupbox, "Fakie Right", &(keybinds.switchRevert));
 
 	// skater controls
 	pgui_label_create(8, 16 + label_offset, 96, 16, "Forward:", PGUI_LABEL_JUSTIFY_LEFT, skater_groupbox);
@@ -1682,8 +1678,6 @@ struct general_page {
 	pgui_control *borderless;
 
 	pgui_control *use_psx_textures;
-	pgui_control *fog_distance_label;
-	pgui_control *fog_distance;
 	pgui_control *texture_filtering_label;
 	pgui_control *texture_filtering;
 	pgui_control *internal_resolution_label;
@@ -1736,38 +1730,11 @@ void set_display_mode(pgui_control *control, int value, void *data) {
 	}
 }
 
-void set_fog_distance(pgui_control *control, int value, void *data) {
-	switch(value) {
-	case 0:
-		settings.fog_distance = 100;
-		return;
-	case 1:
-		settings.fog_distance = 150;
-		return;
-	case 2:
-		settings.fog_distance = 275;
-		return;
-	case 3:
-		settings.fog_distance = 500;
-		return;
-	default:
-		settings.fog_distance = 150;
-		return;
-	}
-}
-
 void do_custom_resolution_textbox(pgui_control *control, int *target) {
 	char buf[16];
 	pgui_textbox_get_text(control, buf, 16);
 	*target = atoi(buf);
 }
-
-char *fog_options[4] = {
-	"PSX (100)",
-	"PC (150)",
-	"Dreamcast (275)",
-	"Max (500)",
-};
 
 char *internal_resolution_options[3] = {
 	"PSX (512x240)",
@@ -1800,9 +1767,7 @@ void build_general_page(pgui_control *parent) {
 	general_page.borderless = pgui_checkbox_create(8, 16 + (24 * 4), 128, 24, "Borderless", resolution_groupbox);
 
 	// graphics options
-	general_page.use_psx_textures = pgui_checkbox_create(8, 16, 128, 24, "Use PSX Textures", graphics_groupbox);
-	general_page.fog_distance_label = pgui_label_create(8, 16 + 24, 128, 24, "Fog Distance:", PGUI_LABEL_JUSTIFY_LEFT, graphics_groupbox);
-	general_page.fog_distance = pgui_combobox_create(8, 16 + 24 + 16, 128, 24, fog_options, 4, graphics_groupbox);
+	general_page.use_psx_textures = pgui_checkbox_create(8, 16, 128, 24, "No Override Textures", graphics_groupbox);
 	general_page.texture_filtering_label = pgui_label_create(8, 16 + 24 + 40, 128, 24, "Texture Filtering:", PGUI_LABEL_JUSTIFY_LEFT, graphics_groupbox);
 	general_page.texture_filtering = pgui_combobox_create(8, 16 + 24 + 40 + 16, 128, 24, texture_filter_options, 3, graphics_groupbox);
 	general_page.internal_resolution_label = pgui_label_create(8, 16 + 24 + (40 * 2), 128, 24, "Internal Resolution:", PGUI_LABEL_JUSTIFY_LEFT, graphics_groupbox);
@@ -1815,7 +1780,6 @@ void build_general_page(pgui_control *parent) {
 	pgui_checkbox_set_on_toggle(general_page.borderless, do_setting_checkbox, &(settings.borderless));
 
 	pgui_checkbox_set_on_toggle(general_page.use_psx_textures, do_setting_checkbox, &(settings.use_psx_textures));
-	pgui_combobox_set_on_select(general_page.fog_distance, set_fog_distance, NULL);
 	pgui_combobox_set_on_select(general_page.texture_filtering, do_setting_combobox, &(settings.texture_filter));
 	pgui_combobox_set_on_select(general_page.internal_resolution, do_setting_combobox, &(settings.internal_resolution));
 
@@ -1878,16 +1842,6 @@ void update_general_page() {
 	pgui_checkbox_set_checked(general_page.borderless, settings.borderless);
 
 	pgui_checkbox_set_checked(general_page.use_psx_textures, settings.use_psx_textures);
-
-	if (settings.fog_distance <= 100) {
-		pgui_combobox_set_selection(general_page.fog_distance, 0);
-	} else if (settings.fog_distance <= 150) {
-		pgui_combobox_set_selection(general_page.fog_distance, 1);
-	} else if (settings.fog_distance <= 275) {
-		pgui_combobox_set_selection(general_page.fog_distance, 2);
-	} else {
-		pgui_combobox_set_selection(general_page.fog_distance, 3);
-	}
 	
 	pgui_combobox_set_selection(general_page.texture_filtering, settings.texture_filter);
 	pgui_combobox_set_selection(general_page.internal_resolution, settings.internal_resolution);

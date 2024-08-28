@@ -2196,7 +2196,7 @@ void loadGfxSettings() {
 		break;
 	}
 
-	useHiResTextures = !getConfigBool(GRAPHICS_SECTION, "UsePSXTextures", 1);
+	useHiResTextures = !getConfigBool(GRAPHICS_SECTION, "NoOverrideTextures", 1);
 }
 
 void applyGfxSettings() {

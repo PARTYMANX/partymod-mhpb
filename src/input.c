@@ -329,6 +329,9 @@ uint16_t pollController(SDL_GameController *controller) {
 }
 
 uint32_t escState = 0;
+uint32_t hardcodedKeysCur = 0x00000000;
+uint32_t hardcodedKeysOld = 0x00000000;
+uint32_t hardcodedKeysDown = 0x00000000;
 
 uint16_t pollKeyboard() {
 	//int *gShellMode = 0x006a35b4;
@@ -406,6 +409,79 @@ uint16_t pollKeyboard() {
 		result |= 0x01 << 15;
 	}
 
+	hardcodedKeysOld = hardcodedKeysCur;
+	hardcodedKeysCur = 0x00000000;
+
+	if (keyboardState[SDL_SCANCODE_RETURN]) {
+		hardcodedKeysCur |= 0x00400001;
+	}
+
+	if (keyboardState[SDL_SCANCODE_ESCAPE]) {
+		hardcodedKeysCur |= 0x00000006;
+	}
+
+	if (keyboardState[SDL_SCANCODE_DELETE]) {
+		hardcodedKeysCur |= 0x00800008;
+	}
+
+	if (keyboardState[SDL_SCANCODE_UP]) {
+		hardcodedKeysCur |= 0x00000010;
+	}
+
+	if (keyboardState[SDL_SCANCODE_DOWN]) {
+		hardcodedKeysCur |= 0x00000020;
+	}
+
+	if (keyboardState[SDL_SCANCODE_LEFT]) {
+		hardcodedKeysCur |= 0x00000040;
+	}
+
+	if (keyboardState[SDL_SCANCODE_RIGHT]) {
+		hardcodedKeysCur |= 0x00000080;
+	}
+
+	if (keyboardState[SDL_SCANCODE_P]) {
+		hardcodedKeysCur |= 0x00000100;
+	}
+
+	if (keyboardState[SDL_SCANCODE_SPACE]) {
+		hardcodedKeysCur |= 0x00000200;
+	}
+
+	if (keyboardState[SDL_SCANCODE_V]) {
+		hardcodedKeysCur |= 0x00100000;
+	}
+
+	if (keyboardState[SDL_SCANCODE_R]) {
+		hardcodedKeysCur |= 0x00200000;
+	}
+
+	if (keyboardState[SDL_SCANCODE_END]) {
+		hardcodedKeysCur |= 0x01000000;
+	}
+
+	if (keyboardState[SDL_SCANCODE_HOME]) {
+		hardcodedKeysCur |= 0x02000000;
+	}
+
+	if (keyboardState[SDL_SCANCODE_PAGEUP]) {
+		hardcodedKeysCur |= 0x04000000;
+	}
+
+	if (keyboardState[SDL_SCANCODE_PAGEDOWN]) {
+		hardcodedKeysCur |= 0x08000000;
+	}
+
+	if (keyboardState[SDL_SCANCODE_C]) {
+		hardcodedKeysCur |= 0x10000000;
+	}
+
+	if (keyboardState[SDL_SCANCODE_LSHIFT] || keyboardState[SDL_SCANCODE_RSHIFT]) {
+		hardcodedKeysCur |= 0x20000000;
+	}
+
+	hardcodedKeysDown = hardcodedKeysCur & (hardcodedKeysCur ^ hardcodedKeysOld);
+
 	return result;
 }
 
@@ -458,7 +534,7 @@ int processMouse() {
 
 	uint8_t oldMouse = curMouse;
 
-	uint32_t mouseX, mouseY, resX, resY;
+	int32_t mouseX, mouseY, resX, resY;
 	curMouse = SDL_GetMouseState(&mouseX, &mouseY);
 
 	mouseDown = curMouse & (curMouse ^ oldMouse);
@@ -473,6 +549,21 @@ int processMouse() {
 		mouseX /= resX;
 		mouseY /= resY;
 
+		if (mouseX < 0) {
+			mouseX = 0;
+		}
+
+		if (mouseX > (resX - 1)) {
+			mouseX = resX - 1;
+		}
+
+		if (mouseY < 0) {
+			mouseY = 0;
+		}
+
+		if (mouseY > (resY - 1)) {
+			mouseY = resY - 1;
+		}
 	
 		uint32_t *gameMouseX[] = { baseAddr + 0x0018d01c, baseAddr + 0x0, baseAddr + 0x001e6b40 };
 		uint32_t *gameMouseY[] = { baseAddr + 0x0018d020, baseAddr + 0x0, baseAddr + 0x001e6b44 };
@@ -659,6 +750,16 @@ int __cdecl GetButtonState(int mask, int just, int unk) {
 	if (*(forcedButtons[currentModule]) & mask) {
 		*(forcedButtons[currentModule]) = *(forcedButtons[currentModule]) & ~mask;
 		return 1;
+	}
+
+	if (just) {
+		if (hardcodedKeysDown & mask) {
+			return 1;
+		}
+	} else {
+		if (hardcodedKeysCur & mask) {
+			return 1;
+		}
 	}
 
 	uint16_t controlsMask = 0x0000;
@@ -901,6 +1002,7 @@ void installModuleInputPatches(int module, uint32_t baseAddr) {
 		patchJmp(baseAddr + 0x0001b050, fakepollcontroller);	// poll controller (skip)
 		patchJmp(baseAddr + 0x00023030, hasMouseMoved);
 		patchNop(baseAddr + 0x00023011, 5);	// don't draw cursor
+		patchDWord(baseAddr + 0x000218df + 1, 0x00030203);
 
 		break;
 	case 1:
