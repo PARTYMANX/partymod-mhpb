@@ -872,7 +872,7 @@ struct settings {
 
 	//int autokick;
 
-	int enable_vibration;
+	//int enable_vibration;
 };
 
 struct keybinds {
@@ -1014,13 +1014,13 @@ void defaultSettings() {
 	settings.windowed = 0;
 	settings.borderless = 0;
 
-	settings.use_psx_textures = 1;
-	settings.texture_filter = 0;
-	settings.internal_resolution = 0;
+	settings.use_psx_textures = 0;
+	settings.texture_filter = 1;
+	settings.internal_resolution = 1;
 	
 	//settings.autokick = 1;
 
-	settings.enable_vibration = 1;
+	//settings.enable_vibration = 1;
 
 	keybinds.ollie = SDL_SCANCODE_KP_2;
 	keybinds.grab = SDL_SCANCODE_KP_6;
@@ -1087,12 +1087,12 @@ void loadSettings() {
 	settings.borderless = getIniBool("Window", "Borderless", 0, configFile);
 
 	settings.use_psx_textures = getIniBool("Graphics", "NoOverrideTextures", 1, configFile);
-	settings.texture_filter = GetPrivateProfileInt("Graphics", "TextureFilter", 0, configFile);
-	settings.internal_resolution = GetPrivateProfileInt("Graphics", "InternalResolution", 0, configFile);
+	settings.texture_filter = GetPrivateProfileInt("Graphics", "TextureFilter", 1, configFile);
+	settings.internal_resolution = GetPrivateProfileInt("Graphics", "InternalResolution", 1, configFile);
 
 	//settings.autokick = getIniBool("Miscellaneous", "Autokick", 1, configFile);
 
-	settings.enable_vibration = getIniBool("Gamepad", "EnableVibration", 1, configFile);
+	//settings.enable_vibration = getIniBool("Gamepad", "EnableVibration", 1, configFile);
 
 	keybinds.ollie = GetPrivateProfileInt("Keybinds", "Ollie", SDL_SCANCODE_KP_2, configFile);
 	keybinds.grab = GetPrivateProfileInt("Keybinds", "Grab", SDL_SCANCODE_KP_6, configFile);
@@ -1190,7 +1190,7 @@ void saveSettings() {
 
 	writeIniInt("Gamepad", "MovementStick", padbinds.movement, configFile);
 
-	writeIniBool("Gamepad", "EnableVibration", settings.enable_vibration, configFile);
+	//writeIniBool("Gamepad", "EnableVibration", settings.enable_vibration, configFile);
 }
 
 // SDL stuff - for keybinds
@@ -1329,7 +1329,7 @@ struct gamepad_page {
 	pgui_control *movement_stick;
 
 	pgui_control *view_toggle;
-	pgui_control *enable_vibration;
+	//pgui_control *enable_vibration;
 };
 
 struct gamepad_page gamepad_page;
@@ -1518,8 +1518,8 @@ void build_gamepad_page(pgui_control *parent) {
 	pgui_label_create(8, 16 + label_offset + (camera_v_spacing), 96, 16, "View Toggle:", PGUI_LABEL_JUSTIFY_LEFT, camera_groupbox);
 	gamepad_page.view_toggle = build_button_combobox(skater_groupbox->w - 8 - box_width, 16 + (camera_v_spacing), box_width, 20, camera_groupbox, &(padbinds.cameraToggle));
 
-	gamepad_page.enable_vibration = pgui_checkbox_create(8, 16 + label_offset + (camera_v_spacing * 2), 96, 16, "Enable Vibration", camera_groupbox);
-	pgui_checkbox_set_on_toggle(gamepad_page.enable_vibration, do_setting_checkbox, &(settings.enable_vibration));
+	//gamepad_page.enable_vibration = pgui_checkbox_create(8, 16 + label_offset + (camera_v_spacing * 2), 96, 16, "Enable Vibration", camera_groupbox);
+	//pgui_checkbox_set_on_toggle(gamepad_page.enable_vibration, do_setting_checkbox, &(settings.enable_vibration));
 }
 
 void setAllPadBindText() {
@@ -1540,7 +1540,7 @@ void setAllPadBindText() {
 	setStickBindBox(gamepad_page.movement_stick, padbinds.movement);
 
 	setButtonBindBox(gamepad_page.view_toggle, padbinds.cameraToggle);
-	pgui_checkbox_set_checked(gamepad_page.enable_vibration, settings.enable_vibration);
+	//pgui_checkbox_set_checked(gamepad_page.enable_vibration, settings.enable_vibration);
 }
 
 struct keyboard_page {

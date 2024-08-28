@@ -2153,16 +2153,17 @@ void m3dinit_setresolution() {
 #define GRAPHICS_SECTION "Graphics"
 
 void loadGfxSettings() {
-	textureFilter = getConfigInt(GRAPHICS_SECTION, "TextureFilter", 0);
+	textureFilter = getConfigInt(GRAPHICS_SECTION, "TextureFilter", 1);
 	//setTextureFilter(renderer, textureFilter);
 	
-	resolution_setting = getConfigInt(GRAPHICS_SECTION, "InternalResolution", 0);
+	resolution_setting = getConfigInt(GRAPHICS_SECTION, "InternalResolution", 1);
 
 	switch(resolution_setting) {
 	case 0:
-		resolution_x = 512;
+		// FIXME: force to 1024x768 grid as the psx aspect ratio breaks covers/medals
+		resolution_x = 1024;
 		internal_resolution_x = 512;
-		resolution_y = 240;
+		resolution_y = 768;
 		internal_resolution_y = 240;
 		break;
 	case 1:
@@ -2189,14 +2190,14 @@ void loadGfxSettings() {
 
 		break;
 	default:
-		resolution_x = 512;
-		internal_resolution_x = 512;
-		resolution_y = 240;
-		internal_resolution_y = 240;
+		resolution_x = 640;
+		internal_resolution_x = 640;
+		resolution_y = 480;
+		internal_resolution_y = 480;
 		break;
 	}
 
-	useHiResTextures = !getConfigBool(GRAPHICS_SECTION, "NoOverrideTextures", 1);
+	useHiResTextures = !getConfigBool(GRAPHICS_SECTION, "NoOverrideTextures", 0);
 }
 
 void applyGfxSettings() {
@@ -2213,8 +2214,9 @@ void applyGfxSettings() {
 	} else {
 		switch(resolution_setting) {
 		case 0:
-			resolution_x = 512;
-			resolution_y = 240;
+			// FIXME: force to 1024x768 grid as the psx aspect ratio breaks covers/medals
+			resolution_x = 1024;
+			resolution_y = 768;
 			break;
 		case 1:
 			resolution_x = 640;
@@ -2235,8 +2237,8 @@ void applyGfxSettings() {
 
 			break;
 		default:
-			resolution_x = 512;
-			resolution_y = 240;
+			resolution_x = 640;
+			resolution_y = 480;
 			break;
 		}
 	}

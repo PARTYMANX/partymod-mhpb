@@ -1,5 +1,5 @@
-# PARTYMOD for MHPB
-This is a patch for MHPB to improve its input handling as well as smooth out a few other parts of the PC port.
+# PARTYMOD for Mat Hoffman's Pro BMX
+This is a patch for Mat Hoffman's Pro BMX to improve its input handling as well as smooth out a few other parts of the PC port.
 The patch is designed to keep the game as original as possible, and leave its files unmodified.
 
 ### Features and Fixes
