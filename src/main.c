@@ -230,6 +230,20 @@ void patchModuleEventHandler(int module, uint32_t baseAddr) {
 	}
 }
 
+void patchDirectSoundDefaultDevice(int module, uint32_t baseAddr) {
+	switch(module) {
+	case 0:
+		patchDWord(baseAddr + 0x0001a108 + 1, 0);
+		break;
+	case 1:
+		patchDWord(baseAddr + 0x00070b18 + 1, 0);
+		break;
+	case 2:
+		patchDWord(baseAddr + 0x00032bd8 + 1, 0);
+		break;
+	}
+}
+
 extern int currentModule = -1;
 
 int (* _cdecl origLoadModule)(char *) = 0x004051e0;
@@ -264,6 +278,7 @@ int _cdecl loadModuleWrapper(char *name) {
 		patchModuleEventHandler(currentModule, baseAddr);
 		installModuleInputPatches(currentModule, baseAddr);
 		patchConfigReadWrite(currentModule, baseAddr);
+		patchDirectSoundDefaultDevice(currentModule, baseAddr);
 	}
 
 	return result;
