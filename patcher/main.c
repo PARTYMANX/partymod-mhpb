@@ -10,16 +10,18 @@ INCBIN(patch, "patcher/executable.bps");
 uint8_t *patchData = NULL;
 uint32_t patchSize = 0;
 
-size_t validinput_sz = 2;
+size_t validinput_sz = 3;
 uint32_t validinput_data[] = {
 	0x1c57a9f3,
 	0x4020b93c,
+	0x39df123b,
 };
 
-size_t validoutput_sz = 2;
+size_t validoutput_sz = 3;
 uint32_t validoutput_data[] = {
 	0x18d5da8e,
 	0x81388ed1,
+	0x1f66e57f,
 };
 
 uint32_t crc32(const void *buf, size_t size);

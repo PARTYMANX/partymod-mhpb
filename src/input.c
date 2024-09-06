@@ -333,12 +333,25 @@ uint32_t hardcodedKeysCur = 0x00000000;
 uint32_t hardcodedKeysOld = 0x00000000;
 uint32_t hardcodedKeysDown = 0x00000000;
 
+uint8_t keystates[256];
+
 uint16_t pollKeyboard() {
 	//int *gShellMode = 0x006a35b4;
 	//uint8_t *isMenuOpen = 0x0069e050;
 
 	uint32_t numKeys = 0;
 	uint8_t *keyboardState = SDL_GetKeyboardState(&numKeys);
+
+	for(int i = 0; i < 256; i++) {
+		keystates[i] = keystates[i] & 0x01;	// clear fresh bit
+		if (i < numKeys && keyboardState[i] != keystates[i]) {
+			if (keyboardState[i] == 1) {
+				keystates[i] = 3;
+			} else {
+				keystates[i] = 0;
+			}
+		}
+	}
 
 	// check keyboard state 
 	for (int i = 0; i < numKeys; i++) {
@@ -699,6 +712,8 @@ void initInput() {
 	configureControls();
 
 	registerEventHandler(processInputEvent);
+
+	memset(keystates, 0, 256);
 }
 
 void ReadDirectInput() {
@@ -930,64 +945,114 @@ int fakepollcontroller() {
 
 // cheat input patches
 int getkeybind(int bind) {
-	return bind;
+	return bind << 16;
 }
 
+SDL_Keycode keyLUT[256] = {
+	-1, SDLK_ESCAPE, SDLK_1, SDLK_2, SDLK_3, SDLK_4, SDLK_5, SDLK_6,	// 0..7
+	SDLK_7, SDLK_8, SDLK_9, SDLK_0, SDLK_MINUS, SDLK_EQUALS, SDLK_BACKSPACE, SDLK_TAB,	// 8..15
+	SDLK_q, SDLK_w, SDLK_e, SDLK_r, SDLK_t, SDLK_y, SDLK_u, SDLK_i,	// 16..23
+	SDLK_o, SDLK_p, SDLK_LEFTBRACKET, SDLK_RIGHTBRACKET, SDLK_RETURN, SDLK_LCTRL, SDLK_a, SDLK_s,	// 24..31
+	SDLK_d, SDLK_f, SDLK_g, SDLK_h, SDLK_j, SDLK_k, SDLK_l, SDLK_SEMICOLON,	// 32..39
+	SDLK_QUOTE, SDLK_BACKQUOTE, SDLK_LSHIFT, SDLK_BACKSLASH, SDLK_z, SDLK_x, SDLK_c, SDLK_v,	// 40..47
+	SDLK_b, SDLK_n, SDLK_m, SDLK_COMMA, SDLK_PERIOD, SDLK_SLASH, SDLK_RSHIFT, SDLK_KP_MULTIPLY,	// 48..55
+	SDLK_LALT, SDLK_SPACE, SDLK_CAPSLOCK, SDLK_F1, SDLK_F2, SDLK_F3, SDLK_F4, SDLK_F5,	// 56..63
+	SDLK_F6, SDLK_F7, SDLK_F8, SDLK_F9, SDLK_F10, SDLK_NUMLOCKCLEAR, SDLK_SCROLLLOCK, SDLK_KP_7,	// 64..71
+	SDLK_KP_8, SDLK_KP_9, SDLK_KP_MINUS, SDLK_KP_4, SDLK_KP_5, SDLK_KP_6, SDLK_KP_PLUS, SDLK_KP_1,	// 72..79
+	SDLK_KP_2, SDLK_KP_3, SDLK_KP_0, SDLK_KP_DECIMAL, -1, -1, -1, SDLK_F11,	// 80..87
+	SDLK_F12, -1, -1, -1, -1, -1, -1, -1,	// 88..95
+	-1, -1, -1, -1, SDLK_F13, SDLK_F14, SDLK_F15, -1,	// 96..103
+	-1, -1, -1, -1, -1, -1, -1, -1,	// 104..111
+	-1, -1, -1, -1, -1, -1, -1, -1,	// 112..119
+	-1, -1, -1, -1, -1, -1, -1, -1,	// 120..127
+	-1, -1, -1, -1, -1, -1, -1, -1,	// 128..135
+	-1, -1, -1, -1, -1, -1, -1, -1,	// 136..143
+	-1, -1, -1, -1, -1, -1, -1, -1,	// 144..151
+	-1, -1, -1, -1, SDLK_KP_ENTER, SDLK_RCTRL, -1, -1,	// 152..159
+	-1, -1, -1, -1, -1, -1, -1, -1,	// 160..167
+	-1, -1, -1, -1, -1, -1, -1, -1,	// 168..175
+	-1, -1, -1, -1, -1, -1, -1, -1,	// 176..183
+	SDLK_RALT, -1, -1, -1, -1, -1, -1, -1,	// 184..191
+	-1, -1, -1, -1, -1, -1, -1, SDLK_HOME,	// 192..199
+	SDLK_UP, SDLK_PAGEUP, -1, SDLK_LEFT, -1, SDLK_RIGHT, -1, SDLK_END,	// 200..207
+	SDLK_DOWN, SDLK_PAGEDOWN, SDLK_INSERT, SDLK_DELETE, -1, -1, -1, -1,	// 208..215
+	-1, -1, -1, SDLK_LGUI, SDLK_RGUI, -1, -1, -1,	// 216..223
+	-1, -1, -1, -1, -1, -1, -1, -1,	// 224..231
+	-1, -1, -1, -1, -1, -1, -1, -1,	// 232..239
+	-1, -1, -1, -1, -1, -1, -1, -1,	// 240..247
+	-1, -1, -1, -1, -1, -1, -1, -1,	// 248..255
+};
+
 int getkeybindstate(int bind, int just) {
-	uint32_t current = 0;
-	uint32_t fresh = 0;
+	
 
-	//GetGameButtonState(&current, &fresh);
-	// directions
-	current |= ((curControlData & 0x01 << 12) != 0) << 0;
-	fresh |= ((buttonsDown & 0x01 << 12) != 0) << 0;
+	if (bind > 0xff) {
+		bind >>= 16;
 
-	current |= ((curControlData & 0x01 << 14) != 0) << 1;
-	fresh |= ((buttonsDown & 0x01 << 14) != 0) << 1;
+		uint32_t current = 0;
+		uint32_t fresh = 0;
 
-	current |= ((curControlData & 0x01 << 15) != 0) << 2;
-	fresh |= ((buttonsDown & 0x01 << 15) != 0) << 2;
+		//GetGameButtonState(&current, &fresh);
+		// directions
+		current |= ((curControlData & 0x01 << 12) != 0) << 0;
+		fresh |= ((buttonsDown & 0x01 << 12) != 0) << 0;
 
-	current |= ((curControlData & 0x01 << 13) != 0) << 3;
-	fresh |= ((buttonsDown & 0x01 << 13) != 0) << 3;
+		current |= ((curControlData & 0x01 << 14) != 0) << 1;
+		fresh |= ((buttonsDown & 0x01 << 14) != 0) << 1;
 
-	// face buttons
-	current |= ((curControlData & 0x01 << 4) != 0) << 4;
-	fresh |= ((buttonsDown & 0x01 << 4) != 0) << 4;
+		current |= ((curControlData & 0x01 << 15) != 0) << 2;
+		fresh |= ((buttonsDown & 0x01 << 15) != 0) << 2;
 
-	current |= ((curControlData & 0x01 << 7) != 0) << 5;
-	fresh |= ((buttonsDown & 0x01 << 7) != 0) << 5;
+		current |= ((curControlData & 0x01 << 13) != 0) << 3;
+		fresh |= ((buttonsDown & 0x01 << 13) != 0) << 3;
 
-	current |= ((curControlData & 0x01 << 5) != 0) << 6;
-	fresh |= ((buttonsDown & 0x01 << 5) != 0) << 6;
+		// face buttons
+		current |= ((curControlData & 0x01 << 4) != 0) << 4;
+		fresh |= ((buttonsDown & 0x01 << 4) != 0) << 4;
 
-	current |= ((curControlData & 0x01 << 6) != 0) << 7;
-	fresh |= ((buttonsDown & 0x01 << 6) != 0) << 7;
+		current |= ((curControlData & 0x01 << 7) != 0) << 5;
+		fresh |= ((buttonsDown & 0x01 << 7) != 0) << 5;
 
-	// shoulders
-	current |= ((curControlData & 0x01 << 2) != 0) << 8;
-	fresh |= ((buttonsDown & 0x01 << 2) != 0) << 8;
+		current |= ((curControlData & 0x01 << 5) != 0) << 6;
+		fresh |= ((buttonsDown & 0x01 << 5) != 0) << 6;
 
-	current |= ((curControlData & 0x01 << 0) != 0) << 9;
-	fresh |= ((buttonsDown & 0x01 << 0) != 0) << 9;
+		current |= ((curControlData & 0x01 << 6) != 0) << 7;
+		fresh |= ((buttonsDown & 0x01 << 6) != 0) << 7;
 
-	current |= ((curControlData & 0x01 << 3) != 0) << 10;
-	fresh |= ((buttonsDown & 0x01 << 3) != 0) << 10;
+		// shoulders
+		current |= ((curControlData & 0x01 << 2) != 0) << 8;
+		fresh |= ((buttonsDown & 0x01 << 2) != 0) << 8;
 
-	current |= ((curControlData & 0x01 << 1) != 0) << 11;
-	fresh |= ((buttonsDown & 0x01 << 1) != 0) << 11;
+		current |= ((curControlData & 0x01 << 0) != 0) << 9;
+		fresh |= ((buttonsDown & 0x01 << 0) != 0) << 9;
 
-	// start/select
-	current |= ((curControlData & 0x01 << 11) != 0) << 12;
-	fresh |= ((buttonsDown & 0x01 << 11) != 0) << 12;
+		current |= ((curControlData & 0x01 << 3) != 0) << 10;
+		fresh |= ((buttonsDown & 0x01 << 3) != 0) << 10;
 
-	current |= ((curControlData & 0x01 << 8) != 0) << 13;
-	fresh |= ((buttonsDown & 0x01 << 8) != 0) << 13;
+		current |= ((curControlData & 0x01 << 1) != 0) << 11;
+		fresh |= ((buttonsDown & 0x01 << 1) != 0) << 11;
 
-	if (just) {
-		return (bind & fresh) != 0;
+		// start/select
+		current |= ((curControlData & 0x01 << 11) != 0) << 12;
+		fresh |= ((buttonsDown & 0x01 << 11) != 0) << 12;
+
+		current |= ((curControlData & 0x01 << 8) != 0) << 13;
+		fresh |= ((buttonsDown & 0x01 << 8) != 0) << 13;
+
+		if (just) {
+			return (bind & fresh) != 0;
+		} else {
+			return (bind & current) != 0;
+		}
 	} else {
-		return (bind & current) != 0;
+		//printf("getkeybindstate: 0x%08x, %d\n", bind, just);
+		SDL_Scancode scancode = SDL_GetScancodeFromKey(keyLUT[bind]);
+
+		if (just) {
+			return keystates[scancode] & 0x02;
+		} else {
+			return keystates[scancode];
+		}
 	}
 }
 
@@ -1003,6 +1068,7 @@ void installModuleInputPatches(int module, uint32_t baseAddr) {
 		patchJmp(baseAddr + 0x00023030, hasMouseMoved);
 		patchNop(baseAddr + 0x00023011, 5);	// don't draw cursor
 		patchDWord(baseAddr + 0x000218df + 1, 0x00030203);
+		patchJmp(baseAddr + 0x000206a0, getkeybindstate);
 
 		break;
 	case 1:
@@ -1024,6 +1090,7 @@ void installModuleInputPatches(int module, uint32_t baseAddr) {
 		patchJmp(baseAddr + 0x00035a40, ReadDirectInput);	// poll keyboard
 		patchJmp(baseAddr + 0x00033a40, fakepollcontroller);	// poll controller (skip)
 		patchJmp(baseAddr + 0x00036b80, hasMouseMoved);
+		patchJmp(baseAddr + 0x00035a50, getkeybindstate);
 		//patchByte(baseAddr + 0x00036b43, 0xc3);	// don't draw cursor
 		patchByte(baseAddr + 0x00036b17, 0xeb);	// don't draw cursor
 		//patchJmp(baseAddr + 0x000763c0, GetGameButtonState);
