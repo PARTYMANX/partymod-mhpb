@@ -101,6 +101,7 @@ uint8_t isUsingKeyboard = 1;
 uint8_t isUsingHardCodeControls = 1;
 uint8_t anyButtonPressed = 0;
 uint8_t isVibrationActive = 1;
+uint8_t isTyping = 0;	// very dumb hack - value is used to determine when to skip user-defined key binds when text entry is showing
 
 void setUsingKeyboard(uint8_t usingKeyboard) {
 	isUsingKeyboard = usingKeyboard;
@@ -364,62 +365,55 @@ uint16_t pollKeyboard() {
 
 	uint16_t result = 0;
 
-	// slight deviation from original behavior: esc goes back in pause/end run menu
-	// to prevent esc double-pressing on menu transitions, process its state here.  
-	// escState = 1 means esc was pressed in menu, 2 means pressed out of menu, 0 is unpressed
-	if (keyboardState[SDL_SCANCODE_ESCAPE] && !escState) {
-		//escState = (*isMenuOpen) ? 1 : 2;
-	} else if (!keyboardState[SDL_SCANCODE_ESCAPE]) {
-		//escState = 0;
-	}
+	if (!isTyping) {
+		// buttons
+		if (keyboardState[keybinds.menu] || escState == 2) {	// is esc is bound to menu, it will only interfere with hardcoded keybinds.  similar effect on enter but i can't detect the things needed to work there
+			result |= 0x01 << 11;
+		}
+		if (keyboardState[keybinds.cameraToggle]) {
+			result |= 0x01 << 8;
+		}
 
-	// buttons
-	if (keyboardState[keybinds.menu] || escState == 2) {	// is esc is bound to menu, it will only interfere with hardcoded keybinds.  similar effect on enter but i can't detect the things needed to work there
-		result |= 0x01 << 11;
-	}
-	if (keyboardState[keybinds.cameraToggle]) {
-		result |= 0x01 << 8;
-	}
+		if (keyboardState[keybinds.grind] || escState == 1) {
+			result |= 0x01 << 4;
+		}
+		if (keyboardState[keybinds.grab]) {
+			result |= 0x01 << 5;
+		}
+		if (keyboardState[keybinds.ollie] || keyboardState[SDL_SCANCODE_RETURN]) {
+			result |= 0x01 << 6;
+		}
+		if (keyboardState[keybinds.kick]) {
+			result |= 0x01 << 7;
+		}
 
-	if (keyboardState[keybinds.grind] || escState == 1) {
-		result |= 0x01 << 4;
-	}
-	if (keyboardState[keybinds.grab]) {
-		result |= 0x01 << 5;
-	}
-	if (keyboardState[keybinds.ollie] || keyboardState[SDL_SCANCODE_RETURN]) {
-		result |= 0x01 << 6;
-	}
-	if (keyboardState[keybinds.kick]) {
-		result |= 0x01 << 7;
-	}
-
-	// shoulders
-	if (keyboardState[keybinds.leftSpin]) {
-		result |= 0x01 << 2;
-	}
-	if (keyboardState[keybinds.rightSpin]) {
-		result |= 0x01 << 3;
-	}
-	if (keyboardState[keybinds.nollie]) {
-		result |= 0x01 << 0;
-	}
-	if (keyboardState[keybinds.switchRevert]) {
-		result |= 0x01 << 1;
-	}
+		// shoulders
+		if (keyboardState[keybinds.leftSpin]) {
+			result |= 0x01 << 2;
+		}
+		if (keyboardState[keybinds.rightSpin]) {
+			result |= 0x01 << 3;
+		}
+		if (keyboardState[keybinds.nollie]) {
+			result |= 0x01 << 0;
+		}
+		if (keyboardState[keybinds.switchRevert]) {
+			result |= 0x01 << 1;
+		}
 		
-	// d-pad
-	if (keyboardState[keybinds.up] || keyboardState[SDL_SCANCODE_UP]) {
-		result |= 0x01 << 12;
-	}
-	if (keyboardState[keybinds.right] || keyboardState[SDL_SCANCODE_RIGHT]) {
-		result |= 0x01 << 13;
-	}
-	if (keyboardState[keybinds.down] || keyboardState[SDL_SCANCODE_DOWN]) {
-		result |= 0x01 << 14;
-	}
-	if (keyboardState[keybinds.left] || keyboardState[SDL_SCANCODE_LEFT]) {
-		result |= 0x01 << 15;
+		// d-pad
+		if (keyboardState[keybinds.up] || keyboardState[SDL_SCANCODE_UP]) {
+			result |= 0x01 << 12;
+		}
+		if (keyboardState[keybinds.right] || keyboardState[SDL_SCANCODE_RIGHT]) {
+			result |= 0x01 << 13;
+		}
+		if (keyboardState[keybinds.down] || keyboardState[SDL_SCANCODE_DOWN]) {
+			result |= 0x01 << 14;
+		}
+		if (keyboardState[keybinds.left] || keyboardState[SDL_SCANCODE_LEFT]) {
+			result |= 0x01 << 15;
+		}
 	}
 
 	hardcodedKeysOld = hardcodedKeysCur;
@@ -716,7 +710,13 @@ void initInput() {
 	memset(keystates, 0, 256);
 }
 
+
+
 void ReadDirectInput() {
+	if (isTyping) {
+		isTyping--;
+	}
+
 	handleEvents();
 	processController();
 	processMouse();
@@ -762,6 +762,8 @@ int __cdecl GetButtonState(int mask, int just, int unk) {
 
 	uint32_t *forcedButtons[] = { baseAddr + 0x0018c758, baseAddr + 0x0021e8b0, baseAddr + 0x001e6a60 };
 
+	printf("BUTTONS: 0x%08x %d\n", mask, unk);
+
 	if (*(forcedButtons[currentModule]) & mask) {
 		*(forcedButtons[currentModule]) = *(forcedButtons[currentModule]) & ~mask;
 		return 1;
@@ -789,6 +791,22 @@ int __cdecl GetButtonState(int mask, int just, int unk) {
 
 	if (mask & 0x00000004) {
 		controlsMask |= 0x01 << 11;	// keyboard esc - translate to start
+	}
+
+	if (mask & 0x00000010) {
+		controlsMask |= 0x01 << 12;	// joystick up
+	}
+
+	if (mask & 0x00000020) {
+		controlsMask |= 0x01 << 14;	// joystick down
+	}
+
+	if (mask & 0x00000040) {
+		controlsMask |= 0x01 << 15;	// joystick left
+	}
+
+	if (mask & 0x00000080) {
+		controlsMask |= 0x01 << 13;	// joystick right
 	}
 
 	if (mask & 0x00000400) {
@@ -984,8 +1002,6 @@ SDL_Keycode keyLUT[256] = {
 };
 
 int getkeybindstate(int bind, int just) {
-	
-
 	if (bind > 0xff) {
 		bind >>= 16;
 
@@ -1046,6 +1062,7 @@ int getkeybindstate(int bind, int just) {
 		}
 	} else {
 		//printf("getkeybindstate: 0x%08x, %d\n", bind, just);
+		isTyping = 2;
 		SDL_Scancode scancode = SDL_GetScancodeFromKey(keyLUT[bind]);
 
 		if (just) {
