@@ -762,8 +762,6 @@ int __cdecl GetButtonState(int mask, int just, int unk) {
 
 	uint32_t *forcedButtons[] = { baseAddr + 0x0018c758, baseAddr + 0x0021e8b0, baseAddr + 0x001e6a60 };
 
-	printf("BUTTONS: 0x%08x %d\n", mask, unk);
-
 	if (*(forcedButtons[currentModule]) & mask) {
 		*(forcedButtons[currentModule]) = *(forcedButtons[currentModule]) & ~mask;
 		return 1;
@@ -966,6 +964,7 @@ int getkeybind(int bind) {
 	return bind << 16;
 }
 
+// i hate this i hate this i hate this i hate this
 SDL_Keycode keyLUT[256] = {
 	-1, SDLK_ESCAPE, SDLK_1, SDLK_2, SDLK_3, SDLK_4, SDLK_5, SDLK_6,	// 0..7
 	SDLK_7, SDLK_8, SDLK_9, SDLK_0, SDLK_MINUS, SDLK_EQUALS, SDLK_BACKSPACE, SDLK_TAB,	// 8..15
@@ -1001,7 +1000,7 @@ SDL_Keycode keyLUT[256] = {
 	-1, -1, -1, -1, -1, -1, -1, -1,	// 248..255
 };
 
-int getkeybindstate(int bind, int just) {
+int getkeybindstate(uint32_t bind, int just) {
 	if (bind > 0xff) {
 		bind >>= 16;
 
@@ -1061,9 +1060,12 @@ int getkeybindstate(int bind, int just) {
 			return (bind & current) != 0;
 		}
 	} else {
-		//printf("getkeybindstate: 0x%08x, %d\n", bind, just);
 		isTyping = 2;
 		SDL_Scancode scancode = SDL_GetScancodeFromKey(keyLUT[bind]);
+
+		if (scancode > 255 || scancode == -1) {
+			return 0;
+		}
 
 		if (just) {
 			return keystates[scancode] & 0x02;
