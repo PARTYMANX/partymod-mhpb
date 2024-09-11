@@ -231,7 +231,7 @@ void appendPolyBuffer(partyRenderer *renderer, renderVertex *vertices, uint32_t 
 
 	if (vertices[0].texture > 0) {
 		int16_t targetTexture = vertices[0].texture;
-		if (targetTexture > renderer->textureManager.capacity) {
+		if (targetTexture >= renderer->textureManager.capacity) {
 			targetTexture -= renderer->textureManager.capacity;
 		}
 
@@ -339,6 +339,36 @@ void destroyTextureEntry(partyRenderer *renderer, uint32_t idx) {
 	}
 
 	destroyTexture(renderer, renderer->textureManager.images[idx - 1]);*/
+}
+
+int getTextureCount(partyRenderer *renderer) {
+	return renderer->textureManager.count;
+}
+
+// DANGER: this will cause dangling pointers!!!
+void clearAllTextures(partyRenderer *renderer) {
+	// flush writes
+	if (renderer->pendingImageWrites->count > 0) {
+		vkQueueWaitIdle(renderer->memQueue->queue);
+
+		for (int i = 0; i < renderer->pendingImageWrites->count; i++) {
+			pendingImageWrite *imgWrite = ((pendingImageWrite *)renderer->pendingImageWrites->data) + i;
+			vkFreeCommandBuffers(renderer->device->device, renderer->memQueue->commandPool, 1, &imgWrite->cmdbuf);
+			destroyBuffer(renderer, &imgWrite->transferbuf);
+		}
+		renderer->pendingImageWrites->count = 0;
+	}
+
+	renderer->pendingImageDeletes->count = 0;
+
+	for (int i = 0; i < renderer->textureManager.capacity; i++) {
+		if (renderer->textureManager.occupied[i]) {
+			destroyTexture(renderer, renderer->textureManager.images[i]);
+			renderer->textureManager.occupied[i] = 0;
+		}
+	}
+
+	renderer->textureManager.count = 0;
 }
 
 void writeTextureDescriptors(partyRenderer *renderer) {

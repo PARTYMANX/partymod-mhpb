@@ -329,7 +329,6 @@ uint16_t pollController(SDL_GameController *controller) {
 	return result;
 }
 
-uint32_t escState = 0;
 uint32_t hardcodedKeysCur = 0x00000000;
 uint32_t hardcodedKeysOld = 0x00000000;
 uint32_t hardcodedKeysDown = 0x00000000;
@@ -367,20 +366,20 @@ uint16_t pollKeyboard() {
 
 	if (!isTyping) {
 		// buttons
-		if (keyboardState[keybinds.menu] || escState == 2) {	// is esc is bound to menu, it will only interfere with hardcoded keybinds.  similar effect on enter but i can't detect the things needed to work there
+		if (keyboardState[keybinds.menu]) {
 			result |= 0x01 << 11;
 		}
 		if (keyboardState[keybinds.cameraToggle]) {
 			result |= 0x01 << 8;
 		}
 
-		if (keyboardState[keybinds.grind] || escState == 1) {
+		if (keyboardState[keybinds.grind]) {
 			result |= 0x01 << 4;
 		}
 		if (keyboardState[keybinds.grab]) {
 			result |= 0x01 << 5;
 		}
-		if (keyboardState[keybinds.ollie] || keyboardState[SDL_SCANCODE_RETURN]) {
+		if (keyboardState[keybinds.ollie]) {
 			result |= 0x01 << 6;
 		}
 		if (keyboardState[keybinds.kick]) {
@@ -1063,7 +1062,7 @@ int getkeybindstate(uint32_t bind, int just) {
 		isTyping = 2;
 		SDL_Scancode scancode = SDL_GetScancodeFromKey(keyLUT[bind]);
 
-		if (scancode > 255 || scancode == -1) {
+		if (scancode > 255 || keyLUT[bind] == -1) {
 			return 0;
 		}
 

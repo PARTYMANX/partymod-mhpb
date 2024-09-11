@@ -115,6 +115,9 @@ void D3DPOLY_Init() {
 		//uint16_t *pushbacks = baseAddr + 0x000d8a04;
 	}
 	Init_PolyBuf[currentModule]();
+
+	// if there are any textures, clear them out
+	clearAllTextures(renderer);
 }
 
 uint32_t fixDXColor(uint32_t color) {
@@ -290,7 +293,7 @@ void renderDXPolyWireframe(int *tag) {
 			buf[outputVert].u = 0.0f;
 			buf[outputVert].v = 0.0f;
 			buf[outputVert].color = fixDXColor(vertices[i].color);
-			buf[outputVert].texture = 0;
+			buf[outputVert].texture = -1;
 			buf[outputVert].flags = 0;
 
 			buf[outputVert + 1].x = vertices[i + 1].x;
@@ -300,7 +303,7 @@ void renderDXPolyWireframe(int *tag) {
 			buf[outputVert + 1].u = 0.0f;
 			buf[outputVert + 1].v = 0.0f;
 			buf[outputVert + 1].color = fixDXColor(vertices[i + 1].color);
-			buf[outputVert + 1].texture = 0;
+			buf[outputVert + 1].texture = -1;
 			buf[outputVert + 1].flags = 0;
 
 			outputVert += 2;
@@ -334,7 +337,7 @@ void renderDXPolyWireframe(int *tag) {
 			buf[outputVert].u = 0.0f;
 			buf[outputVert].v = 0.0f;
 			buf[outputVert].color = fixDXColor(vertices[i].color);
-			buf[outputVert].texture = 0;
+			buf[outputVert].texture = -1;
 			buf[outputVert].flags = 0;
 
 			buf[outputVert + 1].x = vertices[i + 1].x;
@@ -344,7 +347,7 @@ void renderDXPolyWireframe(int *tag) {
 			buf[outputVert + 1].u = 0.0f;
 			buf[outputVert + 1].v = 0.0f;
 			buf[outputVert + 1].color = fixDXColor(vertices[i + 1].color);
-			buf[outputVert + 1].texture = 0;
+			buf[outputVert + 1].texture = -1;
 			buf[outputVert + 1].flags = 0;
 
 			outputVert += 2;

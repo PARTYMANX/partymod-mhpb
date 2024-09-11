@@ -65,6 +65,9 @@ void setTextureFilter(partyRenderer *renderer, uint8_t filter);
 uint32_t createTextureEntry(partyRenderer *renderer, uint32_t width, uint32_t height);
 void updateTextureEntry(partyRenderer *renderer, uint32_t idx, uint32_t width, uint32_t height, void *data);
 void destroyTextureEntry(partyRenderer *renderer, uint32_t idx);
+int getTextureCount(partyRenderer *renderer);
+void clearAllTextures(partyRenderer *renderer);	// DANGER: this will cause dangling pointers!!!
 void renderImageFrame(partyRenderer *renderer, uint32_t texIdx);
+
 
 #endif _GFX_VK_H_
